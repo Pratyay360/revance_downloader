@@ -465,6 +465,3 @@ Future<void> _installApk(String filePath) async {
   }
 }
 
-extension on bool {
-  void operator [](String other) {}
-}
