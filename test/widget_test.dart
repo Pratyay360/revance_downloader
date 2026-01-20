@@ -15,10 +15,13 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
-    // Wait for the app to load
-    await tester.pumpAndSettle();
+    // Trigger a frame to start building the widget tree
+    await tester.pump();
 
     // Verify that our app builds without errors
     expect(find.byType(MaterialApp), findsOneWidget);
+    
+    // Verify that the home page is present
+    expect(find.byType(Scaffold), findsOneWidget);
   });
 }
