@@ -50,7 +50,7 @@ android {
     buildTypes {
         release {
             if (keystorePropertiesFile.exists()) {
-                signingConfig signingConfigs.release
+                signingConfig = signingConfigs.release
             } else {
                 // Signing with the debug keys if no keystore is configured
                 signingConfig = signingConfigs.getByName("debug")
