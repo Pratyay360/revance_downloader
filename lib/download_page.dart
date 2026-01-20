@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:revance_downloader/repo_data.dart';
-import 'package:install_plugin/install_plugin.dart';
+import 'package:flutter_app_installer/flutter_app_installer.dart';
 import 'package:sn_progress_dialog/sn_progress_dialog.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:file_saver/file_saver.dart';
@@ -350,14 +350,23 @@ class _DownloadPageState extends State<DownloadPage> {
       return false;
     }
   }
+Future<void> _installApk(String filePath) async {
+  try {
+    final FlutterAppInstaller installer = FlutterAppInstaller();
+    final dynamic res = await installer.installApk(filePath: filePath);
+    if (!mounted) return;
 
-  Future<void> _installApk(String filePath) async {
-    debugPrint('Installing APK: $filePath');
-    final res = await InstallPlugin.install(filePath);
-    _snack(
-      'install apk ${res['isSuccess'] == true ? 'success' : 'fail:${res['errorMessage'] ?? ''}'}',
-    );
+    if ((res is Map && res['isSuccess'] == true) || res == true) {
+      _snack('install apk success');
+    } else {
+      final String err = (res is Map) ? (res['errorMessage']?.toString() ?? res.toString()) : res.toString();
+      _snack('install apk fail: $err');
+    }
+  } catch (e) {
+    if (!mounted) return;
+    _snack('Install failed: $e');
   }
+}
 
   // ---------------------------------------------------------
   // 6. UI Helpers
@@ -454,4 +463,8 @@ class _DownloadPageState extends State<DownloadPage> {
       ),
     );
   }
+}
+
+extension on bool {
+  void operator [](String other) {}
 }
