@@ -49,7 +49,7 @@ jobs:
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=../../revanced.keystore" >> android/key.properties
+          echo "storeFile=../../my_key.jks" >> android/key.properties
       
       - run: flutter clean
       
