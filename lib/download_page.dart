@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_permission_handler_plus/flutter_permission_handler_plus.dart';
 import 'package:revance_downloader/repo_data.dart';
-import 'package:flutter_app_installer/flutter_app_installer.dart';
+import 'package:package_installer_plus/package_installer_plus.dart';
 import 'package:sn_progress_dialog/sn_progress_dialog.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:file_saver/file_saver.dart';
@@ -92,7 +92,10 @@ class _DownloadPageState extends State<DownloadPage> {
         final List<dynamic> assetsJson = response.data['assets'] ?? [];
         if (mounted) {
           setState(() {
-            _assets = assetsJson.map((e) => GithubAsset.fromJson(e)).toList();
+            _assets = assetsJson
+                .map((e) => GithubAsset.fromJson(e))
+                .where((asset) => asset.name.toLowerCase().endsWith('.apk'||'.aab'))
+                .toList();
             _isLoading = false;
           });
         }
@@ -181,7 +184,7 @@ class _DownloadPageState extends State<DownloadPage> {
                           {'digest': asset.digest},
                           conflictAlgorithm: ConflictAlgorithm.replace,
                         );
-                        final uri = Uri.parse(asset.downloadUrl);
+                        final uri = Uri.parse(asset.downloadUrl.contains);
                         try {
                           if (await canLaunchUrl(uri)) {
                             await launchUrl(
@@ -382,6 +385,18 @@ Future<void> _installApk(String filePath) async {
   }
 }
 
+  Future<void> _quickInstallLatestApk() async {
+    if (_assets.isEmpty) {
+      _snack('No releases found yet. Pull to refresh.');
+      return;
+    }
+    final GithubAsset asset = _assets.firstWhere(
+      (a) => a.name.toLowerCase().endsWith('.apk'),
+      orElse: () => _assets.first,
+    );
+    await _processDownload(asset, saveToPublic: false);
+  }
+
   // ---------------------------------------------------------
   // 6. UI Helpers
   // ---------------------------------------------------------
@@ -413,6 +428,12 @@ Future<void> _installApk(String filePath) async {
         ],
       ),
       body: _buildBody(),
+      // Quick action: fetch from internet (latest asset) and install
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.download),
+        label: const Text('Download & Install'),
+        onPressed: _quickInstallLatestApk,
+      ),
     );
   }
 

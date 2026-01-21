@@ -52,10 +52,8 @@ dependencies:
   dynamic_color: ^1.8.1
   sqflite: ^2.4.2
   url_launcher: ^6.3.2
-  install_plugin: '^2.1.0'
-
-
-
+  package_installer_plus: ^1.0.0
+  flutter_permission_handler_plus: ^0.1.0
 
 
 
