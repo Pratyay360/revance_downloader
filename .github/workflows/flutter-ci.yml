@@ -44,7 +44,7 @@ jobs:
       
       # Setup signing configuration if secrets are available
       - name: Setup signing configuration
-        if: ${{ secrets.KEYSTORE_PASSWORD }}
+        if: secrets.KEYSTORE_PASSWORD != ''
         run: |
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
@@ -67,6 +67,6 @@ jobs:
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/apk/**/*.apk"
+          artifacts: "build/app/outputs/flutter-apk/*.apk"
           tag: v1.0.${{ github.run_number}}
-          token: ${{ github.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
