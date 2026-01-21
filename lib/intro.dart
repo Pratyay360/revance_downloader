@@ -87,8 +87,11 @@ class _IntroScreenState extends State<IntroScreen> {
         content: Text(
           "The following permissions are mandatory:\n\n• ${missing.join('\n• ')}",
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         actions: [
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("OK"),
           ),
@@ -106,14 +109,20 @@ class _IntroScreenState extends State<IntroScreen> {
     return PageViewModel(
       title: title,
       body: body,
-      image: Icon(icon, size: 100, color: Colors.blueAccent),
+      image: Builder(
+        builder: (context) => Icon(
+          icon,
+          size: 100,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
       footer: FutureBuilder<PermissionStatus>(
         future: permission.status,
         builder: (context, snapshot) {
           final isGranted = snapshot.data?.isGranted ?? false;
           return Padding(
             padding: const EdgeInsets.all(20.0),
-            child: ElevatedButton.icon(
+            child: FilledButton.icon(
               onPressed: isGranted
                   ? null
                   : () async {
@@ -122,11 +131,6 @@ class _IntroScreenState extends State<IntroScreen> {
               },
               icon: Icon(isGranted ? Icons.check : icon),
               label: Text(isGranted ? "Allowed" : "Grant Permission"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isGranted ? Colors.green : Colors.blue,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-              ),
             ),
           );
         },
@@ -139,12 +143,19 @@ class _IntroScreenState extends State<IntroScreen> {
     return Scaffold(
       body: IntroductionScreen(
         key: introKey,
-        globalBackgroundColor: Colors.white,
+        globalBackgroundColor:
+            Theme.of(context).colorScheme.surface,
         allowImplicitScrolling: true,
         pages: [
           PageViewModel(
             title: "Welcome",
-            body: "Let's set up your ReVanced Downloader.",
+            body: "Builder(
+              builder: (context) => Icon(
+                Icons.download,
+                size: 100,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            
             image: const Icon(Icons.download, size: 100, color: Colors.blue),
           ),
           _buildPermissionPage(
@@ -169,7 +180,13 @@ class _IntroScreenState extends State<IntroScreen> {
           PageViewModel(
             title: "Repository Details",
             body: "Enter the default GitHub repository details for patches.",
-            image: const Icon(Icons.code, size: 75, color: Colors.blue),
+            image: Builder(
+              builder: (context) => Icon(
+                Icons.code,
+                size: 75,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
             // Use footer to place inputs above the buttons
             footer: Padding(
               padding: const EdgeInsets.symmetric(
@@ -180,23 +197,17 @@ class _IntroScreenState extends State<IntroScreen> {
                 children: [
                   TextField(
                     controller: _userController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'User Name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                      ),
-                      prefixIcon: Icon(Icons.person),
+                      prefixIcon: const Icon(Icons.person),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _repoController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Repo Name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                      ),
-                      prefixIcon: Icon(Icons.code),
+                      prefixIcon: const Icon(Icons.code),
                     ),
                   ),
                 ],

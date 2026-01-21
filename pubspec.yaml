@@ -1,5 +1,5 @@
-name: revance_downloader
-description: "revanced manager :) but no compile"
+name: rd manager
+description: "rd manager :) revanced manager but no compile"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -52,7 +52,8 @@ dependencies:
   dynamic_color: ^1.8.1
   sqflite: ^2.4.2
   url_launcher: ^6.3.2
-  flutter_app_installer: ^1.0.1
+  install_plugin: '^2.1.0'
+
 
 
 

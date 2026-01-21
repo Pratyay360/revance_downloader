@@ -117,21 +117,26 @@ class _DownloadPageState extends State<DownloadPage> {
         return Container(
           padding: const EdgeInsets.all(20),
           height: 220,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Action for ${asset.name}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Choose how you want to handle this file.',
-                style: TextStyle(color: Colors.grey),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 20),
               Row(
@@ -217,17 +222,26 @@ class _DownloadPageState extends State<DownloadPage> {
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor: color,
-                child: Icon(icon, color: color, size: 28),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 28,
               ),
             ),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -433,27 +447,33 @@ Future<void> _installApk(String filePath) async {
               horizontal: 16,
               vertical: 8,
             ),
-            color: Theme.of(context).cardColor,
-            elevation: 2,
+            elevation: 1,
             child: InkWell(
               onTap: () => _showActionOptions(asset),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.extension,
                     size: 32,
-                    color: Colors.blueGrey,
+                    color: Theme.of(context).colorScheme.secondary,
                   ),
                   title: Text(
                     asset.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  subtitle: Text(_formatBytes(asset.size)),
-                  trailing: const Icon(
+                  subtitle: Text(
+                    _formatBytes(asset.size),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  trailing: Icon(
                     Icons.chevron_right,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
