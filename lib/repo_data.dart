@@ -67,9 +67,17 @@ class _RepoDataListState extends State<RepoDataList> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading repos: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error loading repos: $e',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.inverseOnSurface,
+              ),
+            ),
+            backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          ),
+        );
       }
     }
   }
@@ -96,11 +104,11 @@ class _RepoDataListState extends State<RepoDataList> {
           content: Text('Deleted ${deletedRepo.repoName}'),
           action: SnackBarAction(
             label: 'Undo',
-            onPressed: () {
+            onPressed: () async {
               setState(() {
                 _repos.insert(index, deletedRepo);
               });
-              saveRepoDataList(_repos);
+              await saveRepoDataList(_repos);
             },
           ),
         ),
@@ -121,11 +129,22 @@ class _RepoDataListState extends State<RepoDataList> {
           children: [
             TextField(
               controller: userController,
-              decoration: const InputDecoration(labelText: 'User Name'),
+              decoration: InputDecoration(
+                labelText: 'User Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: repoController,
-              decoration: const InputDecoration(labelText: 'Repo Name'),
+              decoration: InputDecoration(
+                labelText: 'Repo Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ],
         ),
@@ -134,7 +153,7 @@ class _RepoDataListState extends State<RepoDataList> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () async {
               if (userController.text.trim().isNotEmpty &&
                   repoController.text.trim().isNotEmpty) {
@@ -174,11 +193,30 @@ class _RepoDataListState extends State<RepoDataList> {
               vertical: 8,
             ),
             child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.code)),
-              title: Text(repo.repoName),
-              subtitle: Text(repo.userName),
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.code,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
+              title: Text(
+                repo.repoName,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                repo.userName,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
               trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
+                icon: Icon(
+                  Icons.delete,
+                  color: Theme.of(context).colorScheme.error,
+                ),
                 onPressed: () => _deleteRepo(index),
               ),
             ),

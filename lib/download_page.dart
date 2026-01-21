@@ -119,7 +119,6 @@ class _DownloadPageState extends State<DownloadPage> {
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(20),
-          height: 220,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.vertical(
@@ -127,11 +126,14 @@ class _DownloadPageState extends State<DownloadPage> {
             ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Action for ${asset.name}',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
@@ -141,7 +143,7 @@ class _DownloadPageState extends State<DownloadPage> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -149,7 +151,7 @@ class _DownloadPageState extends State<DownloadPage> {
                   _actionButton(
                     icon: Icons.system_update,
                     label: 'Download & Install',
-                    color: Colors.orange,
+                    color: Theme.of(context).colorScheme.tertiary,
                     onTap: () async {
                       Navigator.pop(context);
                       bool success = await _processDownload(
@@ -172,7 +174,7 @@ class _DownloadPageState extends State<DownloadPage> {
                   _actionButton(
                     icon: Icons.save_alt,
                     label: 'Open in Browser',
-                    color: Colors.green,
+                    color: Theme.of(context).colorScheme.secondary,
                     onTap: () async {
                       Navigator.pop(context);
 
@@ -220,10 +222,11 @@ class _DownloadPageState extends State<DownloadPage> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 56,
@@ -241,9 +244,10 @@ class _DownloadPageState extends State<DownloadPage> {
             const SizedBox(height: 8),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -482,8 +486,8 @@ Future<void> _installApk(String filePath) async {
                   ),
                   title: Text(
                     asset.name,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   subtitle: Text(
