@@ -4,7 +4,7 @@ on:
   
 jobs:
   build_androidApk:
-    name: Build Flutter App (Android)
+    name: Build Flutter App
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -30,7 +30,7 @@ jobs:
       - name: Push to Releases
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/**/**/**/*.apk"
+          artifacts: "build/app/outputs/*/*.apk"
           allowUpdates: true
           tag: v1.0.${{ github.run_number}}
           token: ${{ secrets.GITHUB_TOKEN }}
