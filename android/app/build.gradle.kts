@@ -16,6 +16,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.revance.revance_downloader"
     compileSdk = flutter.compileSdkVersion
+    compileSdkVersion = 33
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

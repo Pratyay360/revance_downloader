@@ -72,7 +72,7 @@ class _RepoDataListState extends State<RepoDataList> {
             content: Text(
               'Error loading repos: $e',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.inverseOnSurface,
+                color: Theme.of(context).colorScheme.onErrorContainer,
               ),
             ),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
@@ -184,45 +184,47 @@ class _RepoDataListState extends State<RepoDataList> {
           : _repos.isEmpty
           ? const Center(child: Text('No repositories found.'))
           : ListView.builder(
-        itemCount: _repos.length,
-        itemBuilder: (context, index) {
-          final repo = _repos[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
+              itemCount: _repos.length,
+              itemBuilder: (context, index) {
+                final repo = _repos[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.code,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    title: Text(
+                      repo.repoName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      repo.userName,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(
+                        Icons.delete,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () => _deleteRepo(index),
+                    ),
+                  ),
+                );
+              },
             ),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.code,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-              title: Text(
-                repo.repoName,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                repo.userName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              trailing: IconButton(
-                icon: Icon(
-                  Icons.delete,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                onPressed: () => _deleteRepo(index),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:revance_downloader/intro.dart';
-import 'package:revance_downloader/download_page.dart';
+import 'package:rd_manager/intro.dart';
+import 'package:rd_manager/download_page.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:revance_downloader/repo_data.dart';
+import 'package:rd_manager/repo_data.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,11 +23,9 @@ class MyApp extends StatelessWidget {
         foregroundColor: colorScheme.onSurface,
       ),
       scaffoldBackgroundColor: colorScheme.surface,
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         color: colorScheme.surfaceContainer,
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -49,9 +47,7 @@ class MyApp extends StatelessWidget {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -73,7 +69,7 @@ class MyApp extends StatelessWidget {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: TextStyle(color: colorScheme.inverseOnSurface),
+        contentTextStyle: TextStyle(color: colorScheme.inverseSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
@@ -85,7 +81,8 @@ class MyApp extends StatelessWidget {
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         final lightScheme =
             lightDynamic ?? ColorScheme.fromSeed(seedColor: Colors.green);
-        final darkScheme = darkDynamic ??
+        final darkScheme =
+            darkDynamic ??
             ColorScheme.fromSeed(
               seedColor: Colors.deepPurple,
               brightness: Brightness.dark,
@@ -136,9 +133,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<Widget> _checkPermissionsAndNavigate() async {
     final bool notificationGranted = await Permission.notification.isGranted;
     final bool storageGranted =
-    await Permission.manageExternalStorage.isGranted;
+        await Permission.manageExternalStorage.isGranted;
     final bool installGranted =
-    await Permission.requestInstallPackages.isGranted;
+        await Permission.requestInstallPackages.isGranted;
 
     if (notificationGranted && storageGranted && installGranted) {
       final repos = await loadRepoDataList();

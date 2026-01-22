@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:revance_downloader/main.dart';
+import 'package:rd_manager/main.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:revance_downloader/repo_data.dart';
+import 'package:rd_manager/repo_data.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});

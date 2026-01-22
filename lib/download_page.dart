@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_permission_handler_plus/flutter_permission_handler_plus.dart';
-import 'package:revance_downloader/repo_data.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:rd_manager/repo_data.dart';
 import 'package:package_installer_plus/package_installer_plus.dart';
 import 'package:sn_progress_dialog/sn_progress_dialog.dart';
 import 'package:sqflite/sqflite.dart';
@@ -94,7 +94,11 @@ class _DownloadPageState extends State<DownloadPage> {
           setState(() {
             _assets = assetsJson
                 .map((e) => GithubAsset.fromJson(e))
-                .where((asset) => asset.name.toLowerCase().endsWith('.apk'||'.aab'))
+                .where(
+                  (asset) =>
+                      asset.name.toLowerCase().endsWith('.apk') ||
+                      asset.name.toLowerCase().endsWith('.aab'),
+                )
                 .toList();
             _isLoading = false;
           });
@@ -121,9 +125,7 @@ class _DownloadPageState extends State<DownloadPage> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -186,7 +188,7 @@ class _DownloadPageState extends State<DownloadPage> {
                           {'digest': asset.digest},
                           conflictAlgorithm: ConflictAlgorithm.replace,
                         );
-                        final uri = Uri.parse(asset.downloadUrl.contains);
+                        final uri = Uri.parse(asset.downloadUrl);
                         try {
                           if (await canLaunchUrl(uri)) {
                             await launchUrl(
@@ -235,18 +237,14 @@ class _DownloadPageState extends State<DownloadPage> {
                 color: color.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 28,
-              ),
+              child: Icon(icon, color: color, size: 28),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ],
@@ -271,9 +269,9 @@ class _DownloadPageState extends State<DownloadPage> {
   }
 
   Future<bool> _processDownload(
-      GithubAsset asset, {
-        required bool saveToPublic,
-      }) async {
+    GithubAsset asset, {
+    required bool saveToPublic,
+  }) async {
     // A. Permission check (if saving to public)
     if (saveToPublic) {
       if (await Permission.storage.request().isDenied) {
@@ -371,23 +369,26 @@ class _DownloadPageState extends State<DownloadPage> {
       return false;
     }
   }
-Future<void> _installApk(String filePath) async {
-  try {
-    final FlutterAppInstaller installer = FlutterAppInstaller();
-    final dynamic res = await installer.installApk(filePath: filePath);
-    if (!mounted) return;
 
-    if ((res is Map && res['isSuccess'] == true) || res == true) {
-      _snack('install apk success');
-    } else {
-      final String err = (res is Map) ? (res['errorMessage']?.toString() ?? res.toString()) : res.toString();
-      _snack('install apk fail: $err');
+  Future<void> _installApk(String filePath) async {
+    try {
+      final PackageInstallerPlus installer = PackageInstallerPlus();
+      final dynamic res = await installer.installApk(filePath: filePath);
+      if (!mounted) return;
+
+      if ((res is Map && res['isSuccess'] == true) || res == true) {
+        _snack('install apk success');
+      } else {
+        final String err = (res is Map)
+            ? (res['errorMessage']?.toString() ?? res.toString())
+            : res.toString();
+        _snack('install apk fail: $err');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Install failed: $e');
     }
-  } catch (e) {
-    if (!mounted) return;
-    _snack('Install failed: $e');
   }
-}
 
   Future<void> _quickInstallLatestApk() async {
     if (_assets.isEmpty) {
@@ -448,65 +449,66 @@ Future<void> _installApk(String filePath) async {
       onRefresh: _fetchReleases,
       child: _errorMessage != null || _assets.isEmpty
           ? LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
-              height: constraints.maxHeight,
-              child: Center(
-                child: Text(_errorMessage ?? 'No assets found.'),
-              ),
-            ),
-          );
-        },
-      )
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: constraints.maxHeight,
+                    child: Center(
+                      child: Text(_errorMessage ?? 'No assets found.'),
+                    ),
+                  ),
+                );
+              },
+            )
           : ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: _assets.length,
-        itemBuilder: (context, index) {
-          final asset = _assets[index];
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: _assets.length,
+              itemBuilder: (context, index) {
+                final asset = _assets[index];
 
-          return Card(
-            key: ValueKey(asset.id),
-            margin: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            elevation: 1,
-            child: InkWell(
-              onTap: () => _showActionOptions(asset),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.extension,
-                    size: 32,
-                    color: Theme.of(context).colorScheme.secondary,
+                return Card(
+                  key: ValueKey(asset.id),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                  title: Text(
-                    asset.name,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+                  elevation: 1,
+                  child: InkWell(
+                    onTap: () => _showActionOptions(asset),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.extension,
+                          size: 32,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                        title: Text(
+                          asset.name,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          _formatBytes(asset.size),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   ),
-                  subtitle: Text(
-                    _formatBytes(asset.size),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }
-
