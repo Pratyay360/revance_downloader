@@ -4,7 +4,6 @@ import 'package:rd_manager/download_page.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/repo_data.dart';
-import 'package:awesome_notifications/android_foreground_service.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 
 void main() {
