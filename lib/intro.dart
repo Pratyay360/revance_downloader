@@ -149,14 +149,14 @@ class _IntroScreenState extends State<IntroScreen> {
         pages: [
           PageViewModel(
             title: "Welcome",
-            body: "Builder(
+            body: "Download and manage ReVanced apps easily.",
+            image: Builder(
               builder: (context) => Icon(
                 Icons.download,
                 size: 100,
                 color: Theme.of(context).colorScheme.primary,
               ),
-            
-            image: const Icon(Icons.download, size: 100, color: Colors.blue),
+            ),
           ),
           _buildPermissionPage(
             title: "Notifications",
