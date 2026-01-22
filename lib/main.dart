@@ -4,8 +4,45 @@ import 'package:rd_manager/download_page.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/repo_data.dart';
+import 'package:awesome_notifications/android_foreground_service.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 void main() {
+  AwesomeNotifications().initialize(
+    null,
+    [
+      NotificationChannel(
+        channelGroupKey: 'basic_channel_group',
+        channelKey: 'basic_channel',
+        channelName: 'Basic notifications',
+        channelDescription: 'Notification channel for basic tests',
+        defaultColor: const Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        importance: NotificationImportance.High,
+      ),
+      NotificationChannel(
+        channelGroupKey: 'progress_channel_group',
+        channelKey: 'progress_channel',
+        channelName: 'Progress notifications',
+        channelDescription: 'Notification channel for download progress',
+        defaultColor: const Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        importance: NotificationImportance.High,
+        enableVibration: false,
+      ),
+    ],
+    channelGroups: [
+      NotificationChannelGroup(
+        channelGroupKey: 'basic_channel_group',
+        channelGroupName: 'Basic',
+      ),
+      NotificationChannelGroup(
+        channelGroupKey: 'progress_channel_group',
+        channelGroupName: 'Progress',
+      ),
+    ],
+    debug: true,
+  );
   runApp(const MyApp());
 }
 
@@ -31,36 +68,23 @@ class MyApp extends StatelessWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: colorScheme.surfaceContainer,
         contentPadding: const EdgeInsets.all(16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -140,12 +164,46 @@ class _MyHomePageState extends State<MyHomePage> {
     if (notificationGranted && storageGranted && installGranted) {
       final repos = await loadRepoDataList();
       if (repos.isNotEmpty) {
-        return DownloadPage(
-          userName: repos.first.userName,
-          repoName: repos.first.repoName,
-        );
+        return RepoSelector(repos: repos);
       }
     }
     return const IntroScreen();
+  }
+}
+
+class RepoSelector extends StatefulWidget {
+  final List<RepoData> repos;
+
+  const RepoSelector({super.key, required this.repos});
+
+  @override
+  State<RepoSelector> createState() => _RepoSelectorState();
+}
+
+class _RepoSelectorState extends State<RepoSelector> {
+  late int _selectedRepoIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRepoIndex = 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedRepo = widget.repos[_selectedRepoIndex];
+
+    return DownloadPage(
+      key: ValueKey(selectedRepo.userName + selectedRepo.repoName),
+      userName: selectedRepo.userName,
+      repoName: selectedRepo.repoName,
+      repos: widget.repos,
+      currentIndex: _selectedRepoIndex,
+      onRepoChanged: (index) {
+        setState(() {
+          _selectedRepoIndex = index;
+        });
+      },
+    );
   }
 }

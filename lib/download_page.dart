@@ -9,6 +9,7 @@ import 'package:sn_progress_dialog/sn_progress_dialog.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 // ---------------------------------------------------------
 // 1. Data Model
@@ -45,11 +46,17 @@ class GithubAsset {
 class DownloadPage extends StatefulWidget {
   final String userName;
   final String repoName;
+  final List<RepoData> repos;
+  final int currentIndex;
+  final Function(int) onRepoChanged;
 
   const DownloadPage({
     super.key,
     required this.userName,
     required this.repoName,
+    required this.repos,
+    required this.currentIndex,
+    required this.onRepoChanged,
   });
 
   @override
@@ -70,8 +77,8 @@ class _DownloadPageState extends State<DownloadPage> {
   void initState() {
     super.initState();
     _cancelToken = CancelToken();
-    _dio.options.connectTimeout = Duration.zero;
-    _dio.options.receiveTimeout = Duration.zero;
+    _dio.options.connectTimeout = const Duration(seconds: 30);
+    _dio.options.receiveTimeout = const Duration(seconds: 30);
     _fetchReleases();
   }
 
@@ -83,6 +90,11 @@ class _DownloadPageState extends State<DownloadPage> {
 
   Future<void> _fetchReleases() async {
     try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
       final response = await _dio.get(
         'https://api.github.com/repos/${widget.userName}/${widget.repoName}/releases/latest',
         cancelToken: _cancelToken,
@@ -153,7 +165,7 @@ class _DownloadPageState extends State<DownloadPage> {
                   _actionButton(
                     icon: Icons.system_update,
                     label: 'Download & Install',
-                    color: Theme.of(context).colorScheme.tertiary,
+                    color: Theme.of(context).colorScheme.primary,
                     onTap: () async {
                       Navigator.pop(context);
                       bool success = await _processDownload(
@@ -175,12 +187,14 @@ class _DownloadPageState extends State<DownloadPage> {
                   // Option 2: Save & Install (Cache -> Save Public -> Open)
                   _actionButton(
                     icon: Icons.save_alt,
-                    label: 'Open in Browser',
+                    label: 'Download & Save',
                     color: Theme.of(context).colorScheme.secondary,
                     onTap: () async {
                       Navigator.pop(context);
-
-                      final success = Uri.parse(asset.downloadUrl).isAbsolute;
+                      bool success = await _processDownload(
+                        asset,
+                        saveToPublic: true,
+                      );
                       if (success && mounted) {
                         final db = await _getDatabase();
                         await db.insert(
@@ -188,22 +202,32 @@ class _DownloadPageState extends State<DownloadPage> {
                           {'digest': asset.digest},
                           conflictAlgorithm: ConflictAlgorithm.replace,
                         );
-                        final uri = Uri.parse(asset.downloadUrl);
-                        try {
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(
-                              uri,
-                              mode: LaunchMode.externalApplication,
-                            );
-                          } else {
-                            if (mounted) {
-                              _snack('Could not launch ${asset.downloadUrl}');
-                            }
-                          }
-                        } catch (e) {
-                          if (mounted) _snack('Error opening link: $e');
-                        }
                         debugPrint('Saved digest to DB: ${asset.digest}');
+                      }
+                    },
+                  ),
+
+                  // Option 3: Open in Browser
+                  _actionButton(
+                    icon: Icons.open_in_browser,
+                    label: 'Open in Browser',
+                    color: Theme.of(context).colorScheme.tertiary,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final uri = Uri.parse(asset.downloadUrl);
+                      try {
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        } else {
+                          if (mounted) {
+                            _snack('Could not launch ${asset.downloadUrl}');
+                          }
+                        }
+                      } catch (e) {
+                        if (mounted) _snack('Error opening link: $e');
                       }
                     },
                   ),
@@ -293,6 +317,20 @@ class _DownloadPageState extends State<DownloadPage> {
       final Directory tempDir = Directory.systemTemp;
       final String tempPath = '${tempDir.path}/${asset.name}';
 
+      // Show progress notification
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 1,
+          channelKey: 'progress_channel',
+          title: 'Downloading ${asset.name}',
+          body: '0%',
+          notificationLayout: NotificationLayout.ProgressBar,
+          progress: 0.0,
+          locked: true,
+          autoDismissible: false,
+        ),
+      );
+
       // C. Download logic using Dio
       await _dio.download(
         asset.downloadUrl,
@@ -301,6 +339,7 @@ class _DownloadPageState extends State<DownloadPage> {
         onReceiveProgress: (count, total) {
           if (total != -1 && mounted) {
             final value = count / total;
+            final progress = (value * 100).toInt();
             if (_progressValue != value) {
               setState(() {
                 if (_progressValue < 1.0) {
@@ -310,12 +349,26 @@ class _DownloadPageState extends State<DownloadPage> {
                 }
               });
               if (pd.isOpen()) {
-                int progress = (value * 100).toInt();
                 pd.update(
                   value: progress,
                   msg: '${_formatBytes(count)} / ${_formatBytes(total)}',
                 );
               }
+
+              // Update notification
+              AwesomeNotifications().createNotification(
+                content: NotificationContent(
+                  id: 1,
+                  channelKey: 'progress_channel',
+                  title: 'Downloading ${asset.name}',
+                  body: '$progress%',
+                  notificationLayout: NotificationLayout.ProgressBar,
+                  progress: progress.toDouble(),
+                  locked: true,
+                  autoDismissible: false,
+                ),
+              );
+
               debugPrint('${(_progressValue * 100).toStringAsFixed(0)}%');
             }
           }
@@ -355,6 +408,10 @@ class _DownloadPageState extends State<DownloadPage> {
       if (mounted) {
         await _installApk(tempPath);
       }
+
+      // Dismiss notification
+      await AwesomeNotifications().dismiss(1);
+
       return true;
     } catch (e) {
       if (pd.isOpen()) pd.close();
@@ -362,10 +419,13 @@ class _DownloadPageState extends State<DownloadPage> {
         // Check if it was a user cancellation to avoid scary errors
         if (CancelToken.isCancel(e as DioException)) {
           debugPrint('Download cancelled');
+          _snack('Download cancelled');
         } else {
           _snack('Error: $e');
         }
       }
+      // Dismiss notification
+      await AwesomeNotifications().dismiss(1);
       return false;
     }
   }
@@ -377,7 +437,15 @@ class _DownloadPageState extends State<DownloadPage> {
       if (!mounted) return;
 
       if ((res is Map && res['isSuccess'] == true) || res == true) {
-        _snack('install apk success');
+        _snack('Install apk success');
+        await AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 2,
+            channelKey: 'basic_channel',
+            title: 'Installation Complete',
+            body: 'APK installed successfully',
+          ),
+        );
       } else {
         final String err = (res is Map)
             ? (res['errorMessage']?.toString() ?? res.toString())
@@ -402,9 +470,6 @@ class _DownloadPageState extends State<DownloadPage> {
     await _processDownload(asset, saveToPublic: false);
   }
 
-  // ---------------------------------------------------------
-  // 6. UI Helpers
-  // ---------------------------------------------------------
   void _snack(String msg) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -419,7 +484,7 @@ class _DownloadPageState extends State<DownloadPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Releases'),
+        title: Text('${widget.userName}/${widget.repoName}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -427,13 +492,60 @@ class _DownloadPageState extends State<DownloadPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const RepoDataList()),
-              );
+              ).then((_) {
+                // Refresh when returning from settings
+                _fetchReleases();
+              });
             },
           ),
         ],
       ),
+      drawer: widget.repos.length > 1
+          ? Drawer(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  DrawerHeader(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    child: const Text(
+                      'Repositories',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  ...List.generate(
+                    widget.repos.length,
+                    (index) {
+                      final repo = widget.repos[index];
+                      return ListTile(
+                        leading: Icon(
+                          Icons.code,
+                          color: widget.currentIndex == index
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        title: Text(repo.repoName),
+                        subtitle: Text(repo.userName),
+                        selected: widget.currentIndex == index,
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (widget.currentIndex != index) {
+                            widget.onRepoChanged(index);
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+            )
+          : null,
       body: _buildBody(),
-      // Quick action: fetch from internet (latest asset) and install
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.download),
         label: const Text('Download & Install'),

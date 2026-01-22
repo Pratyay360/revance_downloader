@@ -14,9 +14,8 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.revance.revance_downloader"
+    namespace = "com.revance.rd_manager"
     compileSdk = flutter.compileSdkVersion
-    compileSdkVersion = 33
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -32,13 +31,15 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.revance.revance_downloader"
+        applicationId = "com.revance.rd_manager"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        compileSdkVersion = flutter.compileSdkVersion
+        ndkVersion = flutter.ndkVersion
     }
 
     signingConfigs {
