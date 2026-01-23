@@ -298,7 +298,7 @@ class _DownloadPageState extends State<DownloadPage> {
   }) async {
     // A. Permission check (if saving to public)
     if (saveToPublic) {
-      if (await Permission.storage.request().isDenied) {
+      if (await Permission.manageExternalStorage.request().isDenied) {
         if (mounted) _snack('Storage permission denied');
         return false;
       }
