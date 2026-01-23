@@ -1,12 +1,24 @@
-import 'package:flutter/material.dart';
-import 'package:rd_manager/intro.dart';
-import 'package:rd_manager/download_page.dart';
-import 'package:dynamic_color/dynamic_color.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:rd_manager/repo_data.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:rd_manager/download_page.dart';
+import 'package:rd_manager/intro.dart';
+import 'package:rd_manager/repo_data.dart';
+import 'package:sentry/sentry.dart';
+import 'package:sentry_logging/sentry_logging.dart';
 
-void main() {
+Future<void> main() async {
+  await Sentry.init(
+    (options) {
+      options.dsn = 'https://example@sentry.io/example';
+      options.addIntegration(LoggingIntegration());
+    },
+    appRunner: initApp, // Init your App.
+  );
+}
+
+void initApp() {
   AwesomeNotifications().initialize(
     null,
     [
@@ -67,20 +79,22 @@ class MyApp extends StatelessWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         contentPadding: const EdgeInsets.all(16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.outlineVariant),
