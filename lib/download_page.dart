@@ -284,6 +284,7 @@ class _DownloadPageState extends State<DownloadPage> {
       }
     }
 
+    if (!mounted) return;
     final ProgressDialog pd = ProgressDialog(context: context);
 
     FileDownloader.downloadFile(
