@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:rd_manager/main.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rd_manager/main.dart';
 import 'package:rd_manager/repo_data.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
@@ -87,9 +87,7 @@ class _IntroScreenState extends State<IntroScreen> {
         content: Text(
           "The following permissions are mandatory:\n\n• ${missing.join('\n• ')}",
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(context),
@@ -110,11 +108,8 @@ class _IntroScreenState extends State<IntroScreen> {
       title: title,
       body: body,
       image: Builder(
-        builder: (context) => Icon(
-          icon,
-          size: 100,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        builder: (context) =>
+            Icon(icon, size: 100, color: Theme.of(context).colorScheme.primary),
       ),
       footer: FutureBuilder<PermissionStatus>(
         future: permission.status,
@@ -126,9 +121,9 @@ class _IntroScreenState extends State<IntroScreen> {
               onPressed: isGranted
                   ? null
                   : () async {
-                await permission.request();
-                setState(() {}); // Refresh UI
-              },
+                      await permission.request();
+                      setState(() {}); // Refresh UI
+                    },
               icon: Icon(isGranted ? Icons.check : icon),
               label: Text(isGranted ? "Allowed" : "Grant Permission"),
             ),
@@ -143,8 +138,7 @@ class _IntroScreenState extends State<IntroScreen> {
     return Scaffold(
       body: IntroductionScreen(
         key: introKey,
-        globalBackgroundColor:
-            Theme.of(context).colorScheme.surface,
+        globalBackgroundColor: Theme.of(context).colorScheme.surface,
         allowImplicitScrolling: true,
         pages: [
           PageViewModel(
@@ -188,29 +182,32 @@ class _IntroScreenState extends State<IntroScreen> {
               ),
             ),
             // Use footer to place inputs above the buttons
-            footer: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 10.0,
-              ),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _userController,
-                    decoration: InputDecoration(
-                      labelText: 'User Name',
-                      prefixIcon: const Icon(Icons.person),
+            footer: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 10.0,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _userController,
+                      decoration: InputDecoration(
+                        labelText: 'User Name',
+                        prefixIcon: const Icon(Icons.person),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _repoController,
-                    decoration: InputDecoration(
-                      labelText: 'Repo Name',
-                      prefixIcon: const Icon(Icons.code),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _repoController,
+                      decoration: InputDecoration(
+                        labelText: 'Repo Name',
+                        prefixIcon: const Icon(Icons.code),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

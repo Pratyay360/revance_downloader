@@ -36,13 +36,14 @@ dependencies:
   cupertino_icons: ^1.0.8
   permission_handler: ^12.0.1
   dio: ^5.9.0
+  native_dio_adapter: ^1.5.0
   pull_to_refresh: ^2.0.0
   sn_progress_dialog: ^1.2.0
   linear_progress_bar: ^2.0.0+2
   flutter_cache_manager: ^3.4.1
-  mime: ^2.0.0
   super_clipboard: ^0.9.1
   file_saver: ^0.3.1
+  flutter_file_downloader: ^2.1.1
   pretty_animated_buttons: ^0.0.2
   introduction_screen: ^4.0.0
   adaptive_theme: ^3.7.2
@@ -52,9 +53,8 @@ dependencies:
   dynamic_color: ^1.8.1
   sqflite: ^2.4.2
   url_launcher: ^6.3.2
-  package_installer_plus: ^1.0.0
   awesome_notifications: ^0.10.1
-
+  app_installer: ^1.3.1
 
 
 
