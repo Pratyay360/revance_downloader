@@ -55,7 +55,7 @@ dependencies:
   url_launcher: ^6.3.2
   awesome_notifications: ^0.10.1
   app_installer: ^1.3.1
-  android_package_manager: ^0.7.1
+
   sentry_logging: ^9.10.0
   sentry: ^9.10.0
 

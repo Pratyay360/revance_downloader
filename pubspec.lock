@@ -9,14 +9,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.7.2"
-  android_package_manager:
-    dependency: "direct main"
-    description:
-      name: android_package_manager
-      sha256: "2de859fae7226a7de1c1ff9a2308f1967599408800330501a1ce97927c051153"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.7.1"
   app_installer:
     dependency: "direct main"
     description:
