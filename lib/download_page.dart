@@ -324,52 +324,117 @@ class _DownloadPageState extends State<DownloadPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return WillPopScope(
-          onWillPop: () async => false, // Prevent back button
-          child: AlertDialog(
-            title: Text(
-              'Downloading ${asset.name}',
-              style: const TextStyle(fontSize: 16),
+        return PopScope(
+          canPop: false, // Prevent back button
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ValueListenableBuilder<double>(
-                  valueListenable: progressNotifier,
-                  builder: (context, value, _) {
-                    return LinearProgressIndicator(value: value);
-                  },
-                ),
-                const SizedBox(height: 10),
-                ValueListenableBuilder<String>(
-                  valueListenable: statusNotifier,
-                  builder: (context, value, _) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          value,
-                          style: Theme.of(context).textTheme.bodySmall,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.download_rounded,
+                      size: 32,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Title
+                  Text(
+                    'Downloading',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    asset.name,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 32),
+                  // Progress Bar
+                  ValueListenableBuilder<double>(
+                    valueListenable: progressNotifier,
+                    builder: (context, value, _) {
+                      return Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: value,
+                              minHeight: 12,
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Percentage
+                          Text(
+                            '${(value * 100).toStringAsFixed(0)}%',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  // Status Text
+                  ValueListenableBuilder<String>(
+                    valueListenable: statusNotifier,
+                    builder: (context, value, _) {
+                      // We only show the text if it's not the simple percentage
+                      // (since we show that above centrally now)
+                      if (value.endsWith('%')) return const SizedBox.shrink();
+                      return Text(
+                        value,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  isCancelled = true;
-                  // We can't easily cancel the native task with this plugin's simple API,
-                  // but we can close the dialog and ignore the result.
-                  Navigator.pop(context);
-                  _snack('Download cancelled (background task may continue)');
-                },
-                child: const Text('Cancel'),
+                        textAlign: TextAlign.center,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  // Cancel Button
+                  TextButton.icon(
+                    onPressed: () {
+                      isCancelled = true;
+                      Navigator.pop(context);
+                      _snack(
+                        'Download cancelled (background task may continue)',
+                      );
+                    },
+                    icon: const Icon(Icons.close),
+                    label: const Text('Cancel Download'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
