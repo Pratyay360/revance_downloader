@@ -1,4 +1,4 @@
-package com.revance.revance_downloader
+package com.revance.rd_manager
 
 import io.flutter.embedding.android.FlutterActivity
 
