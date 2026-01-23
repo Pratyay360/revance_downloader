@@ -44,6 +44,7 @@ dependencies:
   super_clipboard: ^0.9.1
   file_saver: ^0.3.1
   flutter_file_downloader: ^2.1.1
+  path_provider: ^2.1.2
   pretty_animated_buttons: ^0.0.2
   introduction_screen: ^4.0.0
   adaptive_theme: ^3.7.2

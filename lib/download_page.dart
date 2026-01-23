@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:io';
 
 import 'package:app_installer/app_installer.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -276,57 +276,126 @@ class _DownloadPageState extends State<DownloadPage> {
     GithubAsset asset, {
     required bool saveToPublic,
   }) async {
-    // A. Permission check (if saving to public)
-    if (saveToPublic) {
-      if (await Permission.storage.request().isDenied) {
-        if (mounted) _snack('Storage permission denied');
-        return;
-      }
+    // A. Resolve Permissions (Android 13+ might not need storage permission for public downloads, but good to check for older)
+    if (Platform.isAndroid && await Permission.storage.request().isDenied) {
+      if (mounted) _snack('Storage permission denied');
+      return;
     }
 
     if (!mounted) return;
-    final ProgressDialog pd = ProgressDialog(context: context);
 
+    // B. Setup Notifiers
+    // Note: flutter_file_downloader doesn't expose a simple cancel token like Dio in its basic usage.
+    // We will use a flag to handle "cancel" by ignoring the result.
+    final progressNotifier = ValueNotifier<double>(0.0);
+    final statusNotifier = ValueNotifier<String>('Starting...');
+    bool isCancelled = false;
+
+    // C. Define Download Logic
+    // FileDownloader.downloadFile returns the downloaded File object or null if failed.
+    // It downloads to the public Downloads directory by default.
     FileDownloader.downloadFile(
       url: asset.downloadUrl,
       name: asset.name,
-      downloadDestination: saveToPublic
-          ? DownloadDestinations.publicDownloads
-          : DownloadDestinations.appFiles,
-      onProgress: (fileName, progress) {
-        if (mounted) {
-          final value = progress.toInt();
-          if (!pd.isOpen()) {
-            pd.show(
-              max: 100,
-              msg: 'Downloading ${asset.name}',
-              progressType: ProgressType.determinate,
-            );
-          }
-          pd.update(value: value, msg: 'Downloading... $value%');
+      notificationType: NotificationType.all,
+      onProgress: (name, progress) {
+        if (isCancelled) return;
+        // progress is usually 0-100
+        progressNotifier.value = progress / 100;
+        statusNotifier.value = '${progress.toStringAsFixed(1)}%';
+      },
+      onDownloadError: (errorMessage) {
+        if (isCancelled) return;
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context); // Close dialog
+          _snack('Download error: $errorMessage');
         }
       },
-      onDownloadCompleted: (path) async {
-        if (pd.isOpen()) pd.close();
-        if (mounted) {
-          _snack(
-            'Download completed. File saved to: ${saveToPublic ? "Downloads" : "App Files"}',
-          );
-          final db = await _getDatabase();
-          await db.insert('downloads', {
-            'digest': asset.digest,
-          }, conflictAlgorithm: ConflictAlgorithm.replace);
-          debugPrint('Saved digest to DB: ${asset.digest}');
-          await _installApk(path);
+      onDownloadCompleted: (path) {
+        if (isCancelled) return;
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context); // Close dialog
         }
-      },
-      onDownloadError: (error) {
-        if (pd.isOpen()) pd.close();
-        if (mounted) {
-          _snack('Download Error: $error');
-        }
+        _handleDownloadSuccess(asset, path);
       },
     );
+
+    // D. Show Dialog
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return WillPopScope(
+          onWillPop: () async => false, // Prevent back button
+          child: AlertDialog(
+            title: Text(
+              'Downloading ${asset.name}',
+              style: const TextStyle(fontSize: 16),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ValueListenableBuilder<double>(
+                  valueListenable: progressNotifier,
+                  builder: (context, value, _) {
+                    return LinearProgressIndicator(value: value);
+                  },
+                ),
+                const SizedBox(height: 10),
+                ValueListenableBuilder<String>(
+                  valueListenable: statusNotifier,
+                  builder: (context, value, _) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          value,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  isCancelled = true;
+                  // We can't easily cancel the native task with this plugin's simple API,
+                  // but we can close the dialog and ignore the result.
+                  Navigator.pop(context);
+                  _snack('Download cancelled (background task may continue)');
+                },
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleDownloadSuccess(
+    GithubAsset asset,
+    String savePath,
+  ) async {
+    if (!mounted) return;
+    _snack('Download completed.');
+
+    try {
+      final db = await _getDatabase();
+      await db.insert('downloads', {
+        'digest': asset.digest,
+        'name': asset.name,
+        'path': savePath,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } catch (e) {
+      debugPrint('DB Error: $e');
+    }
+
+    await _installApk(savePath);
   }
 
   Future<void> _installApk(String filePath) async {
