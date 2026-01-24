@@ -275,10 +275,9 @@ class _DownloadPageState extends State<DownloadPage> {
     GithubAsset asset, {
     required bool saveToPublic,
   }) async {
-    // A. Resolve Permissions (Android 13+ might not need storage permission for public downloads, but good to check for older)
-    if (Platform.isAndroid && await Permission.storage.request().isDenied) {
-      if (mounted) _snack('Storage permission denied');
-      return;
+    // A. Resolve Permissions (Storage is handled in main.dart)
+    if (Platform.isAndroid) {
+      await Permission.notification.request();
     }
 
     if (!mounted) return;
@@ -289,6 +288,7 @@ class _DownloadPageState extends State<DownloadPage> {
     final progressNotifier = ValueNotifier<double>(0.0);
     final statusNotifier = ValueNotifier<String>('Starting...');
     bool isCancelled = false;
+    int? downloadId;
 
     // C. Define Download Logic
     // FileDownloader.downloadFile returns the downloaded File object or null if failed.
@@ -296,6 +296,9 @@ class _DownloadPageState extends State<DownloadPage> {
     FileDownloader.downloadFile(
       url: asset.downloadUrl,
       name: asset.name,
+      onDownloadRequestIdReceived: (id) {
+        downloadId = id;
+      },
       notificationType: NotificationType.all,
       onProgress: (name, progress) {
         if (isCancelled) return;
@@ -380,9 +383,9 @@ class _DownloadPageState extends State<DownloadPage> {
                             child: LinearProgressIndicator(
                               value: value,
                               minHeight: 12,
-                              backgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                               color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
@@ -390,9 +393,7 @@ class _DownloadPageState extends State<DownloadPage> {
                           // Percentage
                           Text(
                             '${(value * 100).toStringAsFixed(0)}%',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
+                            style: Theme.of(context).textTheme.labelLarge
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -421,10 +422,11 @@ class _DownloadPageState extends State<DownloadPage> {
                   TextButton.icon(
                     onPressed: () {
                       isCancelled = true;
+                      if (downloadId != null) {
+                        FileDownloader.cancelDownload(downloadId!);
+                      }
                       Navigator.pop(context);
-                      _snack(
-                        'Download cancelled (background task may continue)',
-                      );
+                      _snack('Download cancelled');
                     },
                     icon: const Icon(Icons.close),
                     label: const Text('Cancel Download'),
@@ -487,18 +489,6 @@ class _DownloadPageState extends State<DownloadPage> {
       if (!mounted) return;
       _snack('Install failed: $e');
     }
-  }
-
-  Future<void> _quickInstallLatestApk() async {
-    if (_assets.isEmpty) {
-      _snack('No releases found yet. Pull to refresh.');
-      return;
-    }
-    final GithubAsset asset = _assets.firstWhere(
-      (a) => a.name.toLowerCase().endsWith('.apk'),
-      orElse: () => _assets.first,
-    );
-    await _processDownload(asset, saveToPublic: false);
   }
 
   void _snack(String msg) {
@@ -582,11 +572,6 @@ class _DownloadPageState extends State<DownloadPage> {
             )
           : null,
       body: _buildBody(),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.download),
-        label: const Text('Download & Install'),
-        onPressed: _quickInstallLatestApk,
-      ),
     );
   }
 

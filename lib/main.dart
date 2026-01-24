@@ -5,13 +5,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/download_page.dart';
 import 'package:rd_manager/intro.dart';
 import 'package:rd_manager/repo_data.dart';
-import 'package:sentry/sentry.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
 
 Future<void> main() async {
-  await Sentry.init(
+  await SentryFlutter.init(
     (options) {
-      options.dsn = 'https://example@sentry.io/example';
+      options.dsn =
+          'https://4908a3b922bbc235cadae7907b47deb7@o4510758181208064.ingest.de.sentry.io/4510758182781008';
       options.addIntegration(LoggingIntegration());
     },
     appRunner: initApp, // Init your App.
