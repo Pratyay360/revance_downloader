@@ -34,3 +34,9 @@ jobs:
           allowUpdates: true
           tag: v1.0.${{ github.run_number}}
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: ntfy-notifications    
+        uses: niniyas/ntfy-action@master
+        with:
+          url: ${{ secrets.NTFY_URL }}/rv_update
+          topic: 'New Version Update'
+          details: 'New Updated Version for rv manager is available'
