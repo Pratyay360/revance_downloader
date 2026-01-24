@@ -61,7 +61,7 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=${{ github.workspace }}/android/keystore.jks" >> android/key.properties
           
-      - run: flutter build apk --release --split-per-abi 
+      - run: flutter build apk --release
       
       - name: Push to Releases
         uses: ncipollo/release-action@v1
