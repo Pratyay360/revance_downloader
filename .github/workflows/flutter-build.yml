@@ -25,7 +25,7 @@ jobs:
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=${{ github.workspace }}/android/keystore.jks" >> android/key.properties
-          echo "${{ secrets.ENVS }}" | base64 -d > ./lib/secrets.dart
+          echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
           
       - run: flutter build apk --release --split-per-abi --build-name  'rd_manager'+${{ github.run_number}}
       - name: Push to Releases
