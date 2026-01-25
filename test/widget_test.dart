@@ -4,23 +4,27 @@
 // utility in the flutter_test package. For example, you can send tap and scroll
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rd_manager/main.dart';
 
 void main() {
-  testWidgets('App smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('App Initialization Tests', () {
+    testWidgets('App builds and renders the home screen without errors', (WidgetTester tester) async {
+      // Build our app and trigger a frame.
+      await tester.pumpWidget(const MyApp());
 
-    // Trigger a frame to start building the widget tree
-    await tester.pump();
+      // Verify that the root widget is present.
+      expect(find.byType(MyApp), findsOneWidget);
 
-    // Verify that our app builds without errors
-    expect(find.byType(MaterialApp), findsOneWidget);
+      // Verify that the MaterialApp is configured.
+      expect(find.byType(MaterialApp), findsOneWidget);
 
-    // Verify that the home page is present
-    expect(find.byType(Scaffold), findsOneWidget);
+      // Verify that a Scaffold is present, indicating the UI is loaded.
+      expect(find.byType(Scaffold), findsOneWidget);
+
+      // Ensure no exceptions were thrown during the build process.
+      expect(tester.takeException(), isNull);
+    });
   });
 }

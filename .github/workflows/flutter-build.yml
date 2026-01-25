@@ -54,17 +54,7 @@ jobs:
           # Decode Env Variables
           echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
 
-      # 7. Optimize Gradle (Optional but Recommended)
-      # Enables parallel execution and daemon for faster builds
-      - name: Optimize Gradle
-        run: |
-          mkdir -p ~/.gradle
-          echo "org.gradle.daemon=true" >> ~/.gradle/gradle.properties
-          echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
-          echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
 
-      # 8. Build Release APK
-      # Uses --build-number for version code and --build-name for version name
       - name: Build APK
         run: |
           flutter build apk --release \
