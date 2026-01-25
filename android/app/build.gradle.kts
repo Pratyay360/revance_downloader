@@ -69,3 +69,7 @@ android {
 flutter {
     source = "../.."
 }
+
+configurations.all {
+    exclude(group = "com.google.crypto.tink", module = "tink")
+}
