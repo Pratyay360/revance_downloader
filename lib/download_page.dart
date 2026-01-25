@@ -12,7 +12,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
 // ignore: duplicate_import
-import 'secrets.dart';
+import 'package:rd_manager/secrets.dart';
 
 // ---------------------------------------------------------
 // 1. Data Model
