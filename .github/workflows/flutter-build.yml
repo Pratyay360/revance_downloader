@@ -26,7 +26,7 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=${{ github.workspace }}/android/keystore.jks" >> android/key.properties
           
-      - run: flutter build apk --release
+      - run: flutter build apk --release --split-per-abi --build-name  'rd_manager'+${{ github.run_number}}
       - name: Push to Releases
         uses: ncipollo/release-action@v1
         with:
@@ -37,6 +37,6 @@ jobs:
       - name: ntfy-notifications    
         uses: niniyas/ntfy-action@master
         with:
-          url: ${{ secrets.NTFY_URL }}/rd_update
+          url: ${{ secrets.NTFY_URL }}/${{ secrets.NTFY_TOPIC }}
           topic: 'New Version Update'
           details: 'New Updated Version for rv manager is available'
