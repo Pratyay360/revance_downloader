@@ -46,8 +46,8 @@ app.*.map.json
 
 # Android signing configuration
 /android/key.properties
+secrets.dart 
 
 sentry.properties
 .vscode/
 .dart_tool
-secrets.dart 
