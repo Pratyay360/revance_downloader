@@ -7,19 +7,37 @@ import 'package:rd_manager/intro.dart';
 import 'package:rd_manager/repo_data.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
+import 'package:unifiedpush/unifiedpush.dart';
+import 'secrets.dart';
 
 Future<void> main() async {
-  await SentryFlutter.init(
-    (options) {
-      options.dsn =
-          'https://4908a3b922bbc235cadae7907b47deb7@o4510758181208064.ingest.de.sentry.io/4510758182781008';
-      options.addIntegration(LoggingIntegration());
-    },
-    appRunner: initApp, // Init your App.
-  );
+  await SentryFlutter.init((options) {
+    options.dsn = sentryDsn;
+    options.addIntegration(LoggingIntegration());
+    options.sendDefaultPii = true;
+    options.tracesSampleRate = 1.0;
+    options.enableLogs = true;
+  }, appRunner: initApp);
 }
 
 void initApp() {
+  UnifiedPush.tryUseCurrentOrDefaultDistributor().then((success) async {
+    try {
+      final String inst = '$instance/$topic';
+      UnifiedPush.register(instance: inst);
+    } catch (e) {
+      try {
+        final String inst = '$instanceBKP/$topic';
+        UnifiedPush.register(instance: inst);
+      } catch (e) {
+        await Sentry.captureException(
+          Exception('UnifiedPush registration failed $e'),
+          stackTrace: StackTrace.current,
+        );
+      }
+    }
+  });
+
   AwesomeNotifications().initialize(
     null,
     [
@@ -122,8 +140,8 @@ class MyApp extends StatelessWidget {
         final darkScheme =
             darkDynamic ??
             ColorScheme.fromSeed(
-              seedColor: Colors.deepPurple,
-              brightness: Brightness.dark,
+              seedColor: ThemeData.dark().colorScheme.primary,
+              brightness: ThemeData.dark().brightness,
             );
 
         return MaterialApp(
@@ -132,6 +150,7 @@ class MyApp extends StatelessWidget {
           darkTheme: _buildTheme(darkScheme),
           themeMode: ThemeMode.system,
           home: const MyHomePage(title: 'main page :)'),
+          navigatorObservers: [SentryNavigatorObserver()],
         );
       },
     );
