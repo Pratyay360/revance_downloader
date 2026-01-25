@@ -8,6 +8,7 @@ import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/repo_data.dart';
 import 'package:rd_manager/secrets.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
 // ignore: duplicate_import
@@ -96,7 +97,7 @@ class _DownloadPageState extends State<DownloadPage> {
         _errorMessage = null;
       });
       final res = await _dio.get(
-        'https://api.github.com/repos/${repoRe}/releases/latest',
+        'https://api.github.com/repos/$repoRe/releases/latest',
         cancelToken: _cancelToken,
       );
       var response = await _dio.get(
@@ -123,13 +124,7 @@ class _DownloadPageState extends State<DownloadPage> {
         throw Exception('Failed to load: ${response.statusCode}');
       }
     } catch (e) {
-      if (e is DioException && CancelToken.isCancel(e)) return;
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
+      Sentry.captureException(e);
     }
   }
 

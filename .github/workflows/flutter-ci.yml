@@ -18,7 +18,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-      - run: echo "${{ secrets.ENVS }}" | base64 -d >> ${{ github.workspace }}/lib/secrets.dart          
+      - run: echo "${{ secrets.ENVS }}" | base64 -d > ./lib/secrets.dart
       - run: flutter pub get
       - run: flutter --version
       - run: flutter analyze
