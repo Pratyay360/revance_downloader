@@ -30,6 +30,6 @@ jobs:
               | select(.status == "completed" and .conclusion == "failure")
               | .databaseId
             ' \
-          | xargs -r -n 1 gh run delete --confirm
+          | xargs -r -n 1 gh run delete --confirmcache
 
 
