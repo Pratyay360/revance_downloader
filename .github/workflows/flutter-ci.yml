@@ -27,7 +27,7 @@ jobs:
         uses: actions/cache@v4 # 3. Explicitly cache the pub-cache directory
         with:
           path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml', '**/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -51,6 +51,6 @@ jobs:
         uses: niniyas/ntfy-action@master
         with:
           url: ${{ secrets.NTFY_URL }}
-          topic: test
+          topic: uptest
           details: 'Build #${{ github.run_number }}: ${{ job.status }} - v1.0.${{ github.run_number }}'
-          priority: ${{ job.status == 'success' && 3 || 5 }}
+          
