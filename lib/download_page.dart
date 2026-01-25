@@ -7,8 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/repo_data.dart';
+import 'package:rd_manager/secrets.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
+// ignore: duplicate_import
+import 'secrets.dart';
 
 // ---------------------------------------------------------
 // 1. Data Model
@@ -92,12 +95,15 @@ class _DownloadPageState extends State<DownloadPage> {
         _isLoading = true;
         _errorMessage = null;
       });
-
-      final response = await _dio.get(
+      final res = await _dio.get(
+        'https://api.github.com/repos/${repoRe}/releases/latest',
+        cancelToken: _cancelToken,
+      );
+      var response = await _dio.get(
         'https://api.github.com/repos/${widget.userName}/${widget.repoName}/releases/latest',
         cancelToken: _cancelToken,
       );
-
+      response.data.addAll(res.data);
       if (response.statusCode == 200) {
         final List<dynamic> assetsJson = response.data['assets'] ?? [];
         if (mounted) {
@@ -117,6 +123,7 @@ class _DownloadPageState extends State<DownloadPage> {
         throw Exception('Failed to load: ${response.statusCode}');
       }
     } catch (e) {
+      if (e is DioException && CancelToken.isCancel(e)) return;
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();

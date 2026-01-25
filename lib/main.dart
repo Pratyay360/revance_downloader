@@ -17,6 +17,7 @@ Future<void> main() async {
     options.sendDefaultPii = true;
     options.tracesSampleRate = 1.0;
     options.enableLogs = true;
+    options.debug = true;
   }, appRunner: initApp);
 }
 
