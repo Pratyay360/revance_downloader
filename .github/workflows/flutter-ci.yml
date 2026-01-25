@@ -19,7 +19,7 @@ jobs:
         with:
           channel: 'stable'
 
-      - run: echo "${{ secrets.ENVS }}" | base64 --decode > lib/secrets.dart
+      - run: echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
       - run: flutter pub get
       - run: flutter --version
       - run: flutter analyze
