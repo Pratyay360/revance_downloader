@@ -32,23 +32,4 @@ jobs:
             ' \
           | xargs -r -n 1 gh run delete --confirm
 
-      - name: Delete successful runs older than 15 days (keep latest)
-        run: |
-          cutoff=$(date -d '15 days ago' +%s)
 
-          # Get the most recent successful run (the one we keep)
-          keep_id=$(gh run list --limit 1 --json databaseId,status,conclusion \
-            | jq -r '.[0].databaseId')
-
-          gh run list --limit 1000 --json databaseId,createdAt,status,conclusion \
-          | jq -r --arg cutoff "$cutoff" --arg keep "$keep_id" '
-              .[]
-              | select(
-                  .status == "completed"
-                  and .conclusion == "success"
-                  and (.createdAt | fromdateiso8601) < ($cutoff | tonumber)
-                  and (.databaseId | tostring) != $keep
-                )
-              | .databaseId
-            ' \
-          | xargs -r -n 1 gh run delete --confirm
