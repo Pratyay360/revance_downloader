@@ -4,28 +4,44 @@ on:
   push:
 
 jobs:
-  # JOB 1: TEST
   flutter_test:
     name: Run Flutter Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3  
-      - uses: actions/setup-java@v3
+      - uses: actions/checkout@v4 # Updated to latest version
+
+      - name: Set up Java
+        uses: actions/setup-java@v4 # Updated to v4
         with:
           distribution: 'zulu'
           java-version: '17'
-      
-      - uses: subosito/flutter-action@v2
+          cache: 'gradle' # 1. Automatically caches Gradle dependencies
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true # 2. Caches the Flutter SDK itself
 
-      - run: echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
-      - run: flutter pub get
-      - run: flutter --version
-      - run: flutter analyze
-      - run: flutter test
-      - run: flutter build apk --debug
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v4 # 3. Explicitly cache the pub-cache directory
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
 
+      - name: Setup Secrets
+        run: echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
 
+      - name: Install Dependencies
+        run: flutter pub get
 
-      
+      - name: Run Checks & Tests
+        run: |
+          flutter --version
+          flutter analyze
+          flutter test
+
+      - name: Build Debug APK
+        run: flutter build apk --debug

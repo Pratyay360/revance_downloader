@@ -1,43 +1,93 @@
 name: Build & Upload
 on:
   workflow_dispatch:
-      
+
 jobs:
   build_androidApk:
-    name: Build Flutter App
+    name: Build Release APK
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Required for creating releases
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
+      # 1. Checkout Code (v4)
+      - uses: actions/checkout@v4
+
+      # 2. Setup Java & Cache Gradle Dependencies (v4)
+      # 'cache: gradle' speeds up the build by reusing downloaded dependencies
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
+          cache: 'gradle'
+
+      # 3. Setup Flutter & Cache SDK (v2)
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true
+
+      # 4. Cache Pub Dependencies
+      # Speeds up 'flutter pub get' by storing the package cache
+      - name: Cache Pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      # 5. Install Dependencies
       - run: flutter pub get
-      - name: Setup signing configuration
+
+      # 6. Configure Keystore & Secrets
+      # securely decodes the keystore and writes key.properties
+      - name: Setup Signing Configuration
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/keystore.jks
+          
+          # Create key.properties
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=${{ github.workspace }}/android/keystore.jks" >> android/key.properties
-          echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
           
-      - run: flutter build apk --release --split-per-abi --build-name  'rd_manager'+${{ github.run_number}}
+          # Decode Env Variables
+          echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
+
+      # 7. Optimize Gradle (Optional but Recommended)
+      # Enables parallel execution and daemon for faster builds
+      - name: Optimize Gradle
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.daemon=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
+
+      # 8. Build Release APK
+      # Uses --build-number for version code and --build-name for version name
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+            --split-per-abi \
+            --build-name="1.0.${{ github.run_number }}" \
+            --build-number=${{ github.run_number }}
+
+      # 9. Upload to GitHub Releases
       - name: Push to Releases
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/*/*.apk"
+          artifacts: "build/app/outputs/apk/release/*/*.apk"
           allowUpdates: true
-          tag: v1.0.${{ github.run_number}}
+          tag: v1.0.${{ github.run_number }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          name: "Release v1.0.${{ github.run_number }}"
+          body: "Automated build for run #${{ github.run_number }}"
+
+      # 10. Send Notification
       - name: ntfy-notifications    
         uses: niniyas/ntfy-action@master
         with:
-          url: ${{ secrets.NTFY_URL }}/${{ secrets.NTFY_TOPIC }}
-          topic: 'New Version Update'
-          details: 'New Updated Version for rd manager is available  v${{ github.run_number}}' 
+          url: ${{ secrets.NTFY_URL }}
+          topic: ${{ secrets.NTFY_TOPIC }}
+          details: 'Build #${{ github.run_number }}: ${{ job.status }} - v1.0.${{ github.run_number }}'
+          priority: ${{ job.status == 'success' && 3 || 5 }}
