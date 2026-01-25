@@ -40,4 +40,4 @@ jobs:
         with:
           url: ${{ secrets.NTFY_URL }}/${{ secrets.NTFY_TOPIC }}
           topic: 'New Version Update'
-          details: 'New Updated Version for rv manager is available'
+          details: 'New Updated Version for rd manager is available  v${{ github.run_number}}' 
