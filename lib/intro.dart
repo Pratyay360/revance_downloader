@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/main.dart';
-import 'package:rd_manager/repo_data.dart';
+// import 'package:rd_manager/repo_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rd_manager/secrets.dart';
 
@@ -64,13 +64,8 @@ class _IntroScreenState extends State<IntroScreen> {
       return; // Stop execution if permissions missing
     }
 
-    final repo = RepoData(
-      userName: _userController.text.trim(),
-      repoName: _repoController.text.trim(),
-    );
+    // Just validate the inputs but don't create a default repo
 
-    // Save this as the initial list of repos
-    await saveRepoDataList([repo]);
     // 4. Mark Intro Complete and Navigate
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('intro_completed', true);

@@ -7,19 +7,15 @@ import 'package:rd_manager/notification_helper.dart';
 import 'package:rd_manager/repo_data.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ntfluttery/ntfluttery.dart';
-import 'unified_push_feature.dart';
+import 'simple_unified_push.dart';
 import 'secrets.dart';
 import 'dart:async';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Store args in global variable for use in initApp
   globalArgs = args;
-
-  // Initialize UnifiedPush
-  UnifiedPushFeature().init(args);
 
   await SentryFlutter.init((options) {
     options.dsn = sentryDsn;
@@ -36,6 +32,7 @@ List<String> globalArgs = <String>[];
 
 void initApp() async {
   await NotificationHelper.init();
+  SimpleUnifiedPush().init();
 
   // Check if the app is running in UnifiedPush background mode
   // If it is, don't run the UI app
@@ -59,7 +56,7 @@ void startNtfyListener() {
     while (true) {
       try {
         final latest = await client.getLatestMessage(
-          '$instance/$topic/json?poll=1',
+          '$instance/$topic/json?poll=1&since=latest',
         );
         final messageKey = '${latest.title}::${latest.message}';
         if (messageKey != lastMessageKey) {
@@ -84,9 +81,14 @@ void startNtfyListener() {
   pollLoop();
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
   ThemeData _buildTheme(ColorScheme colorScheme) {
     return ThemeData(
       useMaterial3: true,
@@ -176,6 +178,9 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Future<Widget> _checkPermissionsAndNavigate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool introCompleted = prefs.getBool('intro_completed') ?? false;
+
     final bool notificationGranted = await Permission.notification.isGranted;
     final bool storageGranted =
         await Permission.manageExternalStorage.isGranted;
@@ -183,11 +188,20 @@ class _MyHomePageState extends State<MyHomePage> {
         await Permission.requestInstallPackages.isGranted;
 
     if (notificationGranted && storageGranted && installGranted) {
-      final repos = await loadRepoDataList();
-      if (repos.isNotEmpty) {
-        return RepoSelector(repos: repos);
+      if (introCompleted) {
+        final repos = await loadRepoDataList();
+        if (repos.isNotEmpty) {
+          return RepoSelector(repos: repos);
+        } else {
+          // If intro is completed but no repos exist, show repo management
+          return const RepoDataList();
+        }
+      } else {
+        // Show intro if not completed
+        return const IntroScreen();
       }
     }
+    // If permissions not granted, show intro to get permissions
     return const IntroScreen();
   }
 

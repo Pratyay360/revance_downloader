@@ -43,6 +43,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Intent filters for UnifiedPush -->
+            <intent-filter>
+                <action
+                    android:name="org.unifiedpush.android.distributor.feature.UNIFIED_PUSH"
+                />
+            </intent-filter>
         </activity>
 
         <service
@@ -52,6 +59,15 @@
             android:foregroundServiceType="dataSync"
         >
         </service>
+
+        <!-- Service for UnifiedPush -->
+        <service
+            android:name="org.unifiedpush.flutter.connector.UnifiedPushService"
+            android:enabled="true"
+            android:exported="false"
+        >
+        </service>
+
         <meta-data android:name="flutterEmbedding" android:value="2" />
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -72,6 +88,13 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
+        </intent>
+
+        <!-- Query for UnifiedPush distributors -->
+        <intent>
+            <action
+                android:name="org.unifiedpush.android.distributor.REGISTER"
+            />
         </intent>
     </queries>
 </manifest>

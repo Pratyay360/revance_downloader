@@ -10,7 +10,6 @@ import 'package:rd_manager/repo_data.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
-// ignore: duplicate_import
 
 // ---------------------------------------------------------
 // 1. Data Model
@@ -100,7 +99,6 @@ class _DownloadPageState extends State<DownloadPage> {
         cancelToken: _cancelToken,
       );
       if (response.statusCode == 200) {
-        
         final List<dynamic> assetsJson = response.data['assets'] ?? [];
         if (mounted) {
           setState(() {
@@ -121,7 +119,6 @@ class _DownloadPageState extends State<DownloadPage> {
     } catch (e) {
       Sentry.captureException(e);
     }
-    
   }
 
   void _showActionOptions(GithubAsset asset) {
@@ -456,7 +453,7 @@ class _DownloadPageState extends State<DownloadPage> {
         'path': savePath,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
-      debugPrint('DB Error: $e');
+      Sentry.captureMessage('DB Error: $e');
     }
 
     await _installApk(savePath);
@@ -505,17 +502,27 @@ class _DownloadPageState extends State<DownloadPage> {
       appBar: AppBar(
         title: Text('${widget.userName}/${widget.repoName}'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RepoDataList()),
-              ).then((_) {
-                // Refresh when returning from settings
-                _fetchReleases();
-              });
-            },
+          PopupMenuButton(
+            icon: const Icon(Icons.more_vert),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                child: const ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('Manage Repositories'),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RepoDataList(),
+                    ),
+                  ).then((_) {
+                    // Refresh when returning from settings
+                    _fetchReleases();
+                  });
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -565,6 +572,37 @@ class _DownloadPageState extends State<DownloadPage> {
                       },
                     );
                   }),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.view_list),
+                    title: const Text('All Apps'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AllAppsView(repos: widget.repos),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.library_add),
+                    title: const Text('Manage Repositories'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RepoDataList(),
+                        ),
+                      ).then((_) {
+                        // Refresh when returning from settings
+                        _fetchReleases();
+                      });
+                    },
+                  ),
                 ],
               ),
             )
@@ -642,6 +680,549 @@ class _DownloadPageState extends State<DownloadPage> {
                 );
               },
             ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 3. All Apps View Widget
+// ---------------------------------------------------------
+class AllAppsView extends StatefulWidget {
+  final List<RepoData> repos;
+
+  const AllAppsView({super.key, required this.repos});
+
+  @override
+  State<AllAppsView> createState() => _AllAppsViewState();
+}
+
+class _AllAppsViewState extends State<AllAppsView> {
+  final Dio _dio = Dio();
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _allAssets = []; // Store assets with repo info
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _dio.options.connectTimeout = const Duration(seconds: 30);
+    _dio.options.receiveTimeout = const Duration(seconds: 30);
+    _fetchAllReleases();
+  }
+
+  Future<void> _fetchAllReleases() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        _allAssets = [];
+      });
+
+      // Fetch from all repositories
+      for (final repo in widget.repos) {
+        try {
+          var response = await _dio.get(
+            'https://api.github.com/repos/${repo.userName}/${repo.repoName}/releases/latest',
+          );
+
+          if (response.statusCode == 200) {
+            final List<dynamic> assetsJson = response.data['assets'] ?? [];
+            final repoAssets = assetsJson
+                .map((e) => GithubAsset.fromJson(e))
+                .where(
+                  (asset) =>
+                      asset.name.toLowerCase().endsWith('.apk') ||
+                      asset.name.toLowerCase().endsWith('.aab'),
+                )
+                .toList();
+
+            // Add repo info to each asset
+            for (final asset in repoAssets) {
+              _allAssets.add({'asset': asset, 'repo': repo});
+            }
+          }
+        } catch (e) {
+          // Continue with other repos even if one fails
+          Sentry.captureMessage(
+            'Error fetching from ${repo.userName}/${repo.repoName}: $e',
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Error loading apps: $e';
+        });
+      }
+    }
+  }
+
+  void _showActionOptions(GithubAsset asset, RepoData repo) {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Action for ${asset.name}',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'From: ${repo.userName}/${repo.repoName}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Option 1: Install Only (Cache -> Open)
+                    _actionButton(
+                      icon: Icons.system_update,
+                      label: 'Download & Install',
+                      color: Theme.of(context).colorScheme.primary,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _processDownload(
+                          asset,
+                          saveToPublic: false,
+                          repo: repo,
+                        );
+                      },
+                    ),
+
+                    // Option 2: Save & Install (Cache -> Save Public -> Open)
+                    _actionButton(
+                      icon: Icons.save_alt,
+                      label: 'Download & Save',
+                      color: Theme.of(context).colorScheme.secondary,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _processDownload(asset, saveToPublic: true, repo: repo);
+                      },
+                    ),
+
+                    // Option 3: Open in Browser
+                    _actionButton(
+                      icon: Icons.open_in_browser,
+                      label: 'Open in Browser',
+                      color: Theme.of(context).colorScheme.tertiary,
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final uri = Uri.parse(asset.downloadUrl);
+                        try {
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        } catch (e) {
+                          _snack('Error opening link: $e');
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _snack(String msg) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
+  // ---------------------------------------------------------
+  // Core Logic: Download -> Cache -> (Save) -> Install
+  // ---------------------------------------------------------
+  Future<Database> _getDatabase() async {
+    return openDatabase(
+      'downloads.db',
+      onCreate: (db, version) {
+        return db.execute(
+          'CREATE TABLE downloads(id INTEGER PRIMARY KEY, name TEXT, digest TEXT, path TEXT)',
+        );
+      },
+      version: 1,
+    );
+  }
+
+  Future<void> _processDownload(
+    GithubAsset asset, {
+    required bool saveToPublic,
+    required RepoData repo,
+  }) async {
+    // A. Resolve Permissions (Storage is handled in main.dart)
+    if (Platform.isAndroid) {
+      await Permission.notification.request();
+    }
+
+    if (!mounted) return;
+
+    // B. Setup Notifiers
+    // Note: flutter_file_downloader doesn't expose a simple cancel token like Dio in its basic usage.
+    // We will use a flag to handle "cancel" by ignoring the result.
+    final progressNotifier = ValueNotifier<double>(0.0);
+    final statusNotifier = ValueNotifier<String>('Starting...');
+    bool isCancelled = false;
+    int? downloadId;
+
+    // C. Define Download Logic
+    // FileDownloader.downloadFile returns the downloaded File object or null if failed.
+    // It downloads to the public Downloads directory by default.
+    FileDownloader.downloadFile(
+      url: asset.downloadUrl,
+      name: asset.name,
+      onDownloadRequestIdReceived: (id) {
+        downloadId = id;
+      },
+      notificationType: NotificationType.all,
+      onProgress: (name, progress) {
+        if (isCancelled) return;
+        // progress is usually 0-100
+        progressNotifier.value = progress / 100;
+        statusNotifier.value = '${progress.toStringAsFixed(1)}%';
+      },
+      onDownloadError: (errorMessage) {
+        if (isCancelled) return;
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context); // Close dialog
+          _snack('Download error: $errorMessage');
+        }
+      },
+      onDownloadCompleted: (path) {
+        if (isCancelled) return;
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context); // Close dialog
+        }
+        _handleDownloadSuccess(asset, path, repo);
+      },
+    );
+
+    // D. Show Dialog
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false, // Prevent back button
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.download_rounded,
+                      size: 32,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Title
+                  Text(
+                    'Downloading',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    asset.name,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 32),
+                  // Progress Bar
+                  ValueListenableBuilder<double>(
+                    valueListenable: progressNotifier,
+                    builder: (context, value, _) {
+                      return Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: value,
+                              minHeight: 12,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Percentage
+                          Text(
+                            '${(value * 100).toStringAsFixed(0)}%',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  // Status Text
+                  ValueListenableBuilder<String>(
+                    valueListenable: statusNotifier,
+                    builder: (context, value, _) {
+                      // We only show the text if it's not the simple percentage
+                      // (since we show that above centrally now)
+                      if (value.endsWith('%')) return const SizedBox.shrink();
+                      return Text(
+                        value,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  // Cancel Button
+                  TextButton.icon(
+                    onPressed: () {
+                      isCancelled = true;
+                      if (downloadId != null) {
+                        FileDownloader.cancelDownload(downloadId!);
+                      }
+                      Navigator.pop(context);
+                      _snack('Download cancelled');
+                    },
+                    icon: const Icon(Icons.close),
+                    label: const Text('Cancel Download'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleDownloadSuccess(
+    GithubAsset asset,
+    String savePath,
+    RepoData repo,
+  ) async {
+    if (!mounted) return;
+    _snack('Download completed.');
+
+    try {
+      final db = await _getDatabase();
+      await db.insert('downloads', {
+        'digest': asset.digest,
+        'name': asset.name,
+        'path': savePath,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } catch (e) {
+      Sentry.captureMessage('DB Error: $e');
+    }
+
+    await _installApk(savePath);
+  }
+
+  Future<void> _installApk(String filePath) async {
+    try {
+      final dynamic res = AppInstaller.installApk(filePath);
+      if (!mounted) return;
+
+      if ((res is Map && res['isSuccess'] == true) || res == true) {
+        _snack('Install apk success');
+        await AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 2,
+            channelKey: 'basic_channel',
+            title: 'Installation Complete',
+            body: 'APK installed successfully',
+          ),
+        );
+      } else {
+        final String err = (res is Map)
+            ? (res['errorMessage']?.toString() ?? res.toString())
+            : res.toString();
+        _snack('install apk fail: $err');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Install failed: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('All Apps')),
+      body: RefreshIndicator(
+        onRefresh: _fetchAllReleases,
+        child: _errorMessage != null || _allAssets.isEmpty
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height: constraints.maxHeight,
+                      child: Center(
+                        child: Text(
+                          _errorMessage ??
+                              'No apps found across all repositories.',
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              )
+            : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: _allAssets.length,
+                itemBuilder: (context, index) {
+                  final item = _allAssets[index];
+                  final asset = item['asset'] as GithubAsset;
+                  final repo = item['repo'] as RepoData;
+
+                  return Card(
+                    key: ValueKey(
+                      '${repo.userName}-${repo.repoName}-${asset.id}',
+                    ),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    elevation: 1,
+                    child: InkWell(
+                      onTap: () => _showActionOptions(asset, repo),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.extension,
+                            size: 32,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                          title: Text(
+                            asset.name,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          subtitle: Text(
+                            '${repo.userName}/${repo.repoName}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 }
