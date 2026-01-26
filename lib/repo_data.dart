@@ -3,14 +3,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show CustomSemanticsAction;
 import 'package:shared_preferences/shared_preferences.dart';
-
-
+import 'secrets.dart' as secrets;
 
 class RepoData {
   final String userName;
   final String repoName;
+  final bool isReadOnly;
 
-  const RepoData({required this.userName, required this.repoName});
+  const RepoData({
+    required this.userName,
+    required this.repoName,
+    this.isReadOnly = false,
+  });
 
   // Convert to JSON for saving
   Map<String, dynamic> toJson() => {'userName': userName, 'repoName': repoName};
@@ -27,6 +31,7 @@ const String _repoStorageKey = 'repo_list';
 Future<void> saveRepoDataList(List<RepoData> repos) async {
   final prefs = await SharedPreferences.getInstance();
   final List<String> stringList = repos
+      .where((repo) => !repo.isReadOnly)
       .map((repo) => jsonEncode(repo.toJson()))
       .toList();
   await prefs.setStringList(_repoStorageKey, stringList);
@@ -37,11 +42,29 @@ Future<List<RepoData>> loadRepoDataList() async {
   final prefs = await SharedPreferences.getInstance();
   final List<String>? stringList = prefs.getStringList(_repoStorageKey);
 
-  if (stringList == null) return [];
+  List<RepoData> loaded = [];
+  if (stringList != null) {
+    loaded = stringList.map((stringRepo) {
+      return RepoData.fromJson(jsonDecode(stringRepo));
+    }).toList();
+  }
 
-  return stringList.map((stringRepo) {
-    return RepoData.fromJson(jsonDecode(stringRepo));
-  }).toList();
+  // Remove duplicate/stale default repo if it exists in storage
+  loaded.removeWhere(
+    (r) => r.userName == secrets.userName && r.repoName == secrets.repoName,
+  );
+
+  // Prepend the secret/default repo as read-only
+  loaded.insert(
+    0,
+    RepoData(
+      userName: secrets.userName,
+      repoName: secrets.repoName,
+      isReadOnly: true,
+    ),
+  );
+
+  return loaded;
 }
 
 class RepoDataList extends StatefulWidget {
@@ -94,8 +117,20 @@ class _RepoDataListState extends State<RepoDataList> {
       _repos.add(newRepo);
     });
     await saveRepoDataList(_repos);
+    // Reload to re-sort if necessary (though simple add is fine)
+    // Actually we just added to end, but default is at 0.
+    // If we want to ensure order, maybe just reload?
+    // But modifying _repos directly is fine for now as default is at 0.
   }
-  
+
+  Future<void> _editRepo(int index, String user, String repo) async {
+    final updatedRepo = RepoData(userName: user, repoName: repo);
+    setState(() {
+      _repos[index] = updatedRepo;
+    });
+    await saveRepoDataList(_repos);
+  }
+
   Future<void> _deleteRepo(int index) async {
     final deletedRepo = _repos[index];
     setState(() {
@@ -122,14 +157,15 @@ class _RepoDataListState extends State<RepoDataList> {
     }
   }
 
-  void _showAddDialog() {
-    final userController = TextEditingController();
-    final repoController = TextEditingController();
+  void _showAddDialog({int? index, String? initialUser, String? initialRepo}) {
+    final userController = TextEditingController(text: initialUser);
+    final repoController = TextEditingController(text: initialRepo);
+    final isEditing = index != null;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Repository'),
+        title: Text(isEditing ? 'Edit Repository' : 'Add Repository'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -177,13 +213,23 @@ class _RepoDataListState extends State<RepoDataList> {
                 );
                 return;
               }
-              await _addRepo(
-                userController.text.trim(),
-                repoController.text.trim(),
-              );
+
+              if (isEditing) {
+                await _editRepo(
+                  index,
+                  userController.text.trim(),
+                  repoController.text.trim(),
+                );
+              } else {
+                await _addRepo(
+                  userController.text.trim(),
+                  repoController.text.trim(),
+                );
+              }
+
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('Add'),
+            child: Text(isEditing ? 'Save' : 'Add'),
           ),
         ],
       ),
@@ -195,7 +241,7 @@ class _RepoDataListState extends State<RepoDataList> {
     return Scaffold(
       appBar: AppBar(title: const Text('Repository List'), elevation: 0),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
+        onPressed: () => _showAddDialog(),
         tooltip: 'Add a new repository',
         child: const Icon(Icons.add),
       ),
@@ -263,20 +309,45 @@ class _RepoDataListState extends State<RepoDataList> {
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
-                    trailing: Semantics(
-                      customSemanticsActions: {
-                        CustomSemanticsAction(label: 'delete'): () =>
-                            _deleteRepo(index),
-                      },
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        tooltip: 'Delete repository',
-                        onPressed: () => _deleteRepo(index),
-                      ),
-                    ),
+                    trailing: repo.isReadOnly
+                        ? Tooltip(
+                            message: 'Default repository (Read-only)',
+                            child: Icon(
+                              Icons.lock_outline,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.edit,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                tooltip: 'Edit repository',
+                                onPressed: () => _showAddDialog(
+                                  index: index,
+                                  initialUser: repo.userName,
+                                  initialRepo: repo.repoName,
+                                ),
+                              ),
+                              Semantics(
+                                customSemanticsActions: {
+                                  CustomSemanticsAction(label: 'delete'): () =>
+                                      _deleteRepo(index),
+                                },
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  tooltip: 'Delete repository',
+                                  onPressed: () => _deleteRepo(index),
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
                 );
               },

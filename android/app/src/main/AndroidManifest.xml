@@ -3,22 +3,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.revance.rd_manager"
 >
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission
-        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-    />
-    <uses-permission
-        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
-    />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-    <uses-permission
-        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
-    />
-    <uses-permission
-        android:name="android.permission.REQUEST_DELETE_PACKAGES"
-    />
 
     <application
         android:label="Rd Manager"
@@ -50,21 +34,12 @@
                     android:name="org.unifiedpush.android.distributor.feature.UNIFIED_PUSH"
                 />
             </intent-filter>
-        </activity>
-
-        <service
-            android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
-            android:exported="false"
-            android:stopWithTask="false"
-            android:foregroundServiceType="dataSync"
-        >
-        </service>
-
-        <!-- Service for UnifiedPush -->
+        </activity>        <!-- Service for UnifiedPush -->
         <service
             android:name="org.unifiedpush.flutter.connector.UnifiedPushService"
             android:enabled="true"
-            android:exported="false"
+            android:exported="true"
+            tools:replace="android:exported"
         >
         </service>
 
@@ -83,6 +58,25 @@
             />
         </provider>
     </application>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.NOTIFICATION_SERVICE" />
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+    />
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+    />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+    />
+    <uses-permission
+        android:name="android.permission.REQUEST_DELETE_PACKAGES"
+    />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <queries>
         <intent>

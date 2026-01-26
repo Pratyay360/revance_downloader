@@ -37,13 +37,23 @@ class NotificationHelper {
         ),
       ],
     );
+    await requestPermission();
+  }
+
+  static Future<bool> requestPermission() async {
+    bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
+    if (!isAllowed) {
+      isAllowed = await AwesomeNotifications()
+          .requestPermissionToSendNotifications();
+    }
+    return isAllowed;
   }
 
   static Future<void> showNotification({
     required String title,
     required String body,
   }) async {
-    final allowed = await AwesomeNotifications().isNotificationAllowed();
+    final allowed = await requestPermission();
     if (allowed) {
       await AwesomeNotifications().createNotification(
         content: NotificationContent(

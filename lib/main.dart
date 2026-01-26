@@ -23,7 +23,7 @@ Future<void> main(List<String> args) async {
     options.sendDefaultPii = true;
     options.tracesSampleRate = 1.0;
     options.enableLogs = true;
-    options.debug = true;
+    options.debug = false;
   }, appRunner: initApp);
 }
 
@@ -241,11 +241,24 @@ class _RepoSelectorState extends State<RepoSelector> {
   @override
   void initState() {
     super.initState();
-    _selectedRepoIndex = 0;
+    // Default to "All Apps" (-1)
+    _selectedRepoIndex = -1;
+  }
+
+  void _handleRepoChange(int index) {
+    setState(() {
+      _selectedRepoIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // If index is -1, show All Apps
+    if (_selectedRepoIndex == -1) {
+      return AllAppsView(repos: widget.repos, onRepoChanged: _handleRepoChange);
+    }
+
+    // Otherwise show specific repo
     final selectedRepo = widget.repos[_selectedRepoIndex];
 
     return DownloadPage(
@@ -254,11 +267,7 @@ class _RepoSelectorState extends State<RepoSelector> {
       repoName: selectedRepo.repoName,
       repos: widget.repos,
       currentIndex: _selectedRepoIndex,
-      onRepoChanged: (index) {
-        setState(() {
-          _selectedRepoIndex = index;
-        });
-      },
+      onRepoChanged: _handleRepoChange,
     );
   }
 }

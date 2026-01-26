@@ -57,6 +57,7 @@ dependencies:
   unifiedpush: ^6.2.0
   sentry_logging: ^9.10.0
   sentry_flutter: ^9.10.0
+  awesome_notifications_core: ^0.10.1
   awesome_notifications: ^0.10.1
   ntfluttery: ^0.1.1
 

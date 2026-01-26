@@ -17,12 +17,8 @@ class _IntroScreenState extends State<IntroScreen> {
   final introKey = GlobalKey<IntroductionScreenState>();
 
   // Repo data controllers
-  final TextEditingController _userController = TextEditingController(
-    text: userName,
-  );
-  final TextEditingController _repoController = TextEditingController(
-    text: repoName,
-  );
+  final TextEditingController _userController = TextEditingController();
+  final TextEditingController _repoController = TextEditingController();
 
   // List of permissions
   final List<Permission> _requiredPermissions = [

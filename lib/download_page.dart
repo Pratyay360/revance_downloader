@@ -502,25 +502,32 @@ class _DownloadPageState extends State<DownloadPage> {
       appBar: AppBar(
         title: Text('${widget.userName}/${widget.repoName}'),
         actions: [
-          PopupMenuButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'manage') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RepoDataList()),
+                ).then((_) {
+                  // Refresh when returning from settings
+                  _fetchReleases();
+                });
+              }
+            },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                child: const ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Manage Repositories'),
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RepoDataList(),
+              PopupMenuItem<String>(
+                value: 'manage',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
-                  ).then((_) {
-                    // Refresh when returning from settings
-                    _fetchReleases();
-                  });
-                },
+                    const SizedBox(width: 12),
+                    const Text('Manage Repositories'),
+                  ],
+                ),
               ),
             ],
           ),
@@ -578,13 +585,7 @@ class _DownloadPageState extends State<DownloadPage> {
                     title: const Text('All Apps'),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              AllAppsView(repos: widget.repos),
-                        ),
-                      );
+                      widget.onRepoChanged(-1);
                     },
                   ),
                   ListTile(
@@ -689,8 +690,13 @@ class _DownloadPageState extends State<DownloadPage> {
 // ---------------------------------------------------------
 class AllAppsView extends StatefulWidget {
   final List<RepoData> repos;
+  final Function(int) onRepoChanged;
 
-  const AllAppsView({super.key, required this.repos});
+  const AllAppsView({
+    super.key,
+    required this.repos,
+    required this.onRepoChanged,
+  });
 
   @override
   State<AllAppsView> createState() => _AllAppsViewState();
@@ -1146,7 +1152,107 @@ class _AllAppsViewState extends State<AllAppsView> {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('All Apps')),
+      appBar: AppBar(
+        title: const Text('All Apps'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'manage') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RepoDataList()),
+                ).then((_) {
+                  // Refresh when returning from settings
+                  _fetchAllReleases();
+                });
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: 'manage',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Manage Repositories'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              child: const Text(
+                'Repositories',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ...List.generate(widget.repos.length, (index) {
+              final repo = widget.repos[index];
+              return ListTile(
+                leading: const Icon(Icons.code),
+                title: Text(
+                  repo.repoName,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                subtitle: Text(
+                  repo.userName,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onRepoChanged(index);
+                },
+              );
+            }),
+            const Divider(height: 1),
+            ListTile(
+              leading: Icon(
+                Icons.view_list,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: const Text('All Apps'),
+              selected: true,
+              onTap: () {
+                Navigator.pop(context);
+                // Already on All Apps
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.library_add),
+              title: const Text('Manage Repositories'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RepoDataList()),
+                ).then((_) {
+                  // Refresh when returning from settings
+                  _fetchAllReleases();
+                });
+              },
+            ),
+          ],
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: _fetchAllReleases,
         child: _errorMessage != null || _allAssets.isEmpty
