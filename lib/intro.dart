@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/main.dart';
 import 'package:rd_manager/repo_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rd_manager/secrets.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
@@ -16,8 +17,12 @@ class _IntroScreenState extends State<IntroScreen> {
   final introKey = GlobalKey<IntroductionScreenState>();
 
   // Repo data controllers
-  final TextEditingController _userController = TextEditingController();
-  final TextEditingController _repoController = TextEditingController();
+  final TextEditingController _userController = TextEditingController(
+    text: user_name,
+  );
+  final TextEditingController _repoController = TextEditingController(
+    text: repo_name,
+  );
 
   // List of permissions
   final List<Permission> _requiredPermissions = [
@@ -59,7 +64,6 @@ class _IntroScreenState extends State<IntroScreen> {
       return; // Stop execution if permissions missing
     }
 
-    // 3. Save Data
     final repo = RepoData(
       userName: _userController.text.trim(),
       repoName: _repoController.text.trim(),
@@ -67,7 +71,6 @@ class _IntroScreenState extends State<IntroScreen> {
 
     // Save this as the initial list of repos
     await saveRepoDataList([repo]);
-
     // 4. Mark Intro Complete and Navigate
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('intro_completed', true);
