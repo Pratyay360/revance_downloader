@@ -2,7 +2,7 @@ name: rd_manager
 description: "rd manager :) revanced manager but no compile"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -54,14 +54,17 @@ dependencies:
   dynamic_color: ^1.8.1
   sqflite: ^2.4.2
   url_launcher: ^6.3.2
-  awesome_notifications: ^0.10.1
   app_installer: ^1.3.1
   unifiedpush: ^6.2.0
-  unifiedpush_android: ^3.4.1
   sentry_logging: ^9.10.0
   sentry_flutter: ^9.10.0
+  flutter_local_notifications: ^14.0.0
 
-
+dependency_overrides:
+  webcrypto:
+    git:
+      url: https://codeberg.org/UnifiedPush/webcrypto.dart.git
+      ref: 0.6.0-up1
 
 dev_dependencies:
   flutter_test:
@@ -79,7 +82,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

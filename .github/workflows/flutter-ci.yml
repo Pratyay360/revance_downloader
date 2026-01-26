@@ -13,14 +13,14 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4 # Updated to v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle' # 1. Automatically caches Gradle dependencies
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle" # 1. Automatically caches Gradle dependencies
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: "stable"
           cache: true # 2. Caches the Flutter SDK itself
 
       - name: Cache Pub Dependencies
@@ -44,13 +44,13 @@ jobs:
           flutter test
 
       - name: Build Debug APK
-        run: flutter build apk --debug
+        run:
+          flutter build apk --debug
 
-            # 10. Send Notification
-      - name: ntfy-notifications    
+          # 10. Send Notification
+      - name: ntfy-notifications
         uses: niniyas/ntfy-action@master
         with:
           url: ${{ secrets.NTFY_URL }}
           topic: uptest
-          details: 'Build #${{ github.run_number }}: ${{ job.status }} - v1.0.${{ github.run_number }}'
-          
+          details: "Build #${{ github.run_number }}: ${{ job.status }} - v1.0.${{ github.run_number }}"
