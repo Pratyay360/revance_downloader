@@ -27,54 +27,49 @@ void initApp() {
       final String inst = '$instance/$topic';
       UnifiedPush.register(instance: inst);
     } catch (e) {
-      try {
-        final String inst = '$instanceBKP/$topic';
-        UnifiedPush.register(instance: inst);
-      } catch (e) {
-        await Sentry.captureException(
-          Exception('UnifiedPush registration failed $e'),
-          stackTrace: StackTrace.current,
-        );
-      }
+      await Sentry.captureException(
+        Exception('UnifiedPush registration failed $e'),
+        stackTrace: StackTrace.current,
+      );
     }
-  });
 
-  AwesomeNotifications().initialize(
-    null,
-    [
-      NotificationChannel(
-        channelGroupKey: 'basic_channel_group',
-        channelKey: 'basic_channel',
-        channelName: 'Basic notifications',
-        channelDescription: 'Notification channel for basic tests',
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        importance: NotificationImportance.High,
-      ),
-      NotificationChannel(
-        channelGroupKey: 'progress_channel_group',
-        channelKey: 'progress_channel',
-        channelName: 'Progress notifications',
-        channelDescription: 'Notification channel for download progress',
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        importance: NotificationImportance.High,
-        enableVibration: false,
-      ),
-    ],
-    channelGroups: [
-      NotificationChannelGroup(
-        channelGroupKey: 'basic_channel_group',
-        channelGroupName: 'Basic',
-      ),
-      NotificationChannelGroup(
-        channelGroupKey: 'progress_channel_group',
-        channelGroupName: 'Progress',
-      ),
-    ],
-    debug: true,
-  );
-  runApp(const MyApp());
+    AwesomeNotifications().initialize(
+      null,
+      [
+        NotificationChannel(
+          channelGroupKey: 'basic_channel_group',
+          channelKey: 'basic_channel',
+          channelName: 'Basic notifications',
+          channelDescription: 'Notification channel for basic tests',
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          importance: NotificationImportance.High,
+        ),
+        NotificationChannel(
+          channelGroupKey: 'progress_channel_group',
+          channelKey: 'progress_channel',
+          channelName: 'Progress notifications',
+          channelDescription: 'Notification channel for download progress',
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          importance: NotificationImportance.High,
+          enableVibration: false,
+        ),
+      ],
+      channelGroups: [
+        NotificationChannelGroup(
+          channelGroupKey: 'basic_channel_group',
+          channelGroupName: 'Basic',
+        ),
+        NotificationChannelGroup(
+          channelGroupKey: 'progress_channel_group',
+          channelGroupName: 'Progress',
+        ),
+      ],
+      debug: true,
+    );
+    runApp(const MyApp());
+  });
 }
 
 class MyApp extends StatelessWidget {
