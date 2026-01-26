@@ -163,6 +163,22 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  Future<Widget> _checkPermissionsAndNavigate() async {
+    final bool notificationGranted = await Permission.notification.isGranted;
+    final bool storageGranted =
+        await Permission.manageExternalStorage.isGranted;
+    final bool installGranted =
+        await Permission.requestInstallPackages.isGranted;
+
+    if (notificationGranted && storageGranted && installGranted) {
+      final repos = await loadRepoDataList();
+      if (repos.isNotEmpty) {
+        return RepoSelector(repos: repos);
+      }
+    }
+    return const IntroScreen();
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Widget>(
@@ -182,28 +198,12 @@ class _MyHomePageState extends State<MyHomePage> {
       },
     );
   }
-
-  Future<Widget> _checkPermissionsAndNavigate() async {
-    final bool notificationGranted = await Permission.notification.isGranted;
-    final bool storageGranted =
-        await Permission.manageExternalStorage.isGranted;
-    final bool installGranted =
-        await Permission.requestInstallPackages.isGranted;
-
-    if (notificationGranted && storageGranted && installGranted) {
-      final repos = await loadRepoDataList();
-      if (repos.isNotEmpty) {
-        return RepoSelector(repos: repos);
-      }
-    }
-    return const IntroScreen();
-  }
 }
 
 class RepoSelector extends StatefulWidget {
-  final List<RepoData> repos;
-
   const RepoSelector({super.key, required this.repos});
+
+  final List<RepoData> repos;
 
   @override
   State<RepoSelector> createState() => _RepoSelectorState();
