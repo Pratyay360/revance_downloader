@@ -44,7 +44,7 @@ jobs:
           flutter test
 
       - name: Build Debug APK
-        run:
+        run: |
           flutter build apk --debug
 
           # 10. Send Notification
