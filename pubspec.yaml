@@ -37,7 +37,6 @@ dependencies:
   permission_handler: ^12.0.1
   dio: ^5.9.0
   native_dio_adapter: ^1.5.0
-  pull_to_refresh: ^2.0.0
   sn_progress_dialog: ^1.2.0
   linear_progress_bar: ^2.0.0+2
   flutter_cache_manager: ^3.4.1
@@ -58,7 +57,8 @@ dependencies:
   unifiedpush: ^6.2.0
   sentry_logging: ^9.10.0
   sentry_flutter: ^9.10.0
-  flutter_local_notifications: ^14.0.0
+  awesome_notifications: ^0.10.1
+  ntfluttery: ^0.1.1
 
 dependency_overrides:
   webcrypto:

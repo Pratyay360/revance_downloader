@@ -30,7 +30,14 @@ subprojects {
 
     // Force an AndroidX compatibility artifact so legacy support library references are satisfied
     configurations.all {
-        // This forces a common AndroidX replacement that often satisfies legacy support references
+        resolutionStrategy {
+            // Use the latest version published: https://central.sonatype.com/artifact/com.google.crypto.tink/tink-android
+            val tink = "com.google.crypto.tink:tink-android:1.17.0"
+            force(tink)
+            dependencySubstitution {
+                substitute(module("com.google.crypto.tink:tink")).using(module(tink))
+            }
+        }
         resolutionStrategy.force("androidx.legacy:legacy-support-core-utils:1.0.0")
     }
 }

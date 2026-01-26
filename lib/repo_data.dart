@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show CustomSemanticsAction;
-import 'package:rd_manager/secrets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 

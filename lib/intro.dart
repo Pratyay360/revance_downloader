@@ -18,10 +18,10 @@ class _IntroScreenState extends State<IntroScreen> {
 
   // Repo data controllers
   final TextEditingController _userController = TextEditingController(
-    text: user_name,
+    text: userName,
   );
   final TextEditingController _repoController = TextEditingController(
-    text: repo_name,
+    text: repoName,
   );
 
   // List of permissions
@@ -222,11 +222,12 @@ class _IntroScreenState extends State<IntroScreen> {
         next: const Icon(Icons.arrow_forward),
         done: const Text("Done", style: TextStyle(fontWeight: FontWeight.w600)),
         dotsDecorator: const DotsDecorator(
-          size: Size(10.0, 10.0),
-          activeSize: Size(22.0, 10.0),
+          size: Size(8.0, 8.0),
+          activeSize: Size(16.0, 8.0),
           activeShape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(25.0)),
+            borderRadius: BorderRadius.all(Radius.circular(8.0)),
           ),
+          spacing: EdgeInsets.all(4.0),
         ),
       ),
     );

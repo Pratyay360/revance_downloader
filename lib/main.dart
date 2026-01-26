@@ -1,17 +1,26 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/download_page.dart';
 import 'package:rd_manager/intro.dart';
+import 'package:rd_manager/notification_helper.dart';
 import 'package:rd_manager/repo_data.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
 import 'package:ntfluttery/ntfluttery.dart';
+import 'unified_push_feature.dart';
 import 'secrets.dart';
 import 'dart:async';
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Store args in global variable for use in initApp
+  globalArgs = args;
+
+  // Initialize UnifiedPush
+  UnifiedPushFeature().init(args);
+
   await SentryFlutter.init((options) {
     options.dsn = sentryDsn;
     options.addIntegration(LoggingIntegration());
@@ -22,43 +31,18 @@ Future<void> main() async {
   }, appRunner: initApp);
 }
 
+// Global variable to store args
+List<String> globalArgs = <String>[];
+
 void initApp() async {
-  AwesomeNotifications().initialize(
-    null,
-    [
-      NotificationChannel(
-        channelGroupKey: 'basic_channel_group',
-        channelKey: 'basic_channel',
-        channelName: 'Basic notifications',
-        channelDescription: 'Notification channel for basic tests',
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        importance: NotificationImportance.High,
-      ),
-      NotificationChannel(
-        channelGroupKey: 'progress_channel_group',
-        channelKey: 'progress_channel',
-        channelName: 'Progress notifications',
-        channelDescription: 'Notification channel for download progress',
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        importance: NotificationImportance.High,
-        enableVibration: false,
-      ),
-    ],
-    channelGroups: [
-      NotificationChannelGroup(
-        channelGroupKey: 'basic_channel_group',
-        channelGroupName: 'Basic',
-      ),
-      NotificationChannelGroup(
-        channelGroupKey: 'progress_channel_group',
-        channelGroupName: 'Progress',
-      ),
-    ],
-  );
-  runApp(const MyApp());
-  startNtfyListener();
+  await NotificationHelper.init();
+
+  // Check if the app is running in UnifiedPush background mode
+  // If it is, don't run the UI app
+  if (!globalArgs.contains("--unifiedpush-bg")) {
+    runApp(const MyApp());
+    startNtfyListener();
+  }
 }
 
 /// Long-running loop that long-polls the ntfy instance and shows local notifications.
@@ -69,30 +53,22 @@ void startNtfyListener() {
     credentials: Credentials(username: ntfyUsername, password: ntfyToken),
   );
 
-  String _lastMessageKey = '' ;
+  String lastMessageKey = '';
 
-  Future<void> _pollLoop() async {
-    while (true) {  
+  Future<void> pollLoop() async {
+    while (true) {
       try {
         final latest = await client.getLatestMessage(
           '$instance/$topic/json?poll=1',
         );
         final messageKey = '${latest.title}::${latest.message}';
-        if (messageKey != _lastMessageKey) {
-          _lastMessageKey = messageKey;
+        if (messageKey != lastMessageKey) {
+          lastMessageKey = messageKey;
 
-          final allowed = await AwesomeNotifications().isNotificationAllowed();
-          if (allowed == true) {
-            await AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-                channelKey: 'basic_channel',
-                title: latest.title,
-                body: latest.message,
-                notificationLayout: NotificationLayout.Default,
-              ),
-            );
-          }
+          await NotificationHelper.showNotification(
+            title: latest.title,
+            body: latest.message,
+          );
         }
       } catch (e, st) {
         // Simple backoff on errors
@@ -105,7 +81,7 @@ void startNtfyListener() {
   }
 
   // fire-and-forget
-  _pollLoop();
+  pollLoop();
 }
 
 class MyApp extends StatelessWidget {
