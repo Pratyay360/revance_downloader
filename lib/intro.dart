@@ -4,7 +4,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/main.dart';
 // import 'package:rd_manager/repo_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:rd_manager/secrets.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
