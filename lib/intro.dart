@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/main.dart';
-// import 'package:rd_manager/repo_data.dart';
+import 'package:rd_manager/repo_data.dart';
+import 'package:rd_manager/secrets.dart' as secrets;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class IntroScreen extends StatefulWidget {
@@ -25,6 +26,13 @@ class _IntroScreenState extends State<IntroScreen> {
     Permission.requestInstallPackages,
     Permission.notification,
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _userController.text = secrets.userName;
+    _repoController.text = secrets.repoName;
+  }
 
   @override
   void dispose() {
@@ -59,7 +67,14 @@ class _IntroScreenState extends State<IntroScreen> {
       return; // Stop execution if permissions missing
     }
 
-    // Just validate the inputs but don't create a default repo
+    // 3. Save the entered repo data if it's not the default
+    final user = _userController.text.trim();
+    final repo = _repoController.text.trim();
+
+    if (user != secrets.userName || repo != secrets.repoName) {
+      final newRepo = RepoData(userName: user, repoName: repo);
+      await saveRepoDataList([newRepo]);
+    }
 
     // 4. Mark Intro Complete and Navigate
     final prefs = await SharedPreferences.getInstance();
@@ -76,15 +91,15 @@ class _IntroScreenState extends State<IntroScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Permissions Required"),
+        title: const Text('Permissions Required'),
         content: Text(
-          "The following permissions are mandatory:\n\n• ${missing.join('\n• ')}",
+          'The following permissions are mandatory:\n\n• ${missing.join('\n• ')}',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -118,7 +133,7 @@ class _IntroScreenState extends State<IntroScreen> {
                       setState(() {}); // Refresh UI
                     },
               icon: Icon(isGranted ? Icons.check : icon),
-              label: Text(isGranted ? "Allowed" : "Grant Permission"),
+              label: Text(isGranted ? 'Allowed' : 'Grant Permission'),
             ),
           );
         },
@@ -135,8 +150,8 @@ class _IntroScreenState extends State<IntroScreen> {
         allowImplicitScrolling: true,
         pages: [
           PageViewModel(
-            title: "Welcome",
-            body: "Download and manage ReVanced apps easily.",
+            title: 'Welcome',
+            body: 'Download and manage ReVanced apps easily.',
             image: Builder(
               builder: (context) => Icon(
                 Icons.download,
@@ -146,27 +161,27 @@ class _IntroScreenState extends State<IntroScreen> {
             ),
           ),
           _buildPermissionPage(
-            title: "Notifications",
-            body: "Required to show download progress and completion.",
+            title: 'Notifications',
+            body: 'Required to show download progress and completion.',
             icon: Icons.notifications,
             permission: Permission.notification,
           ),
           _buildPermissionPage(
-            title: "File Access",
-            body: "Required to save APKs to your device.",
+            title: 'File Access',
+            body: 'Required to save APKs to your device.',
             icon: Icons.folder,
             permission: Permission.manageExternalStorage,
           ),
           _buildPermissionPage(
-            title: "Install Apps",
-            body: "Required to install the downloaded ReVanced apps.",
+            title: 'Install Apps',
+            body: 'Required to install the downloaded ReVanced apps.',
             icon: Icons.android,
             permission: Permission.requestInstallPackages,
           ),
           // The Input Page
           PageViewModel(
-            title: "Repository Details",
-            body: "Enter the default GitHub repository details for patches.",
+            title: 'Repository Details',
+            body: 'Enter the default GitHub repository details for patches.',
             image: Builder(
               builder: (context) => Icon(
                 Icons.code,
@@ -210,7 +225,7 @@ class _IntroScreenState extends State<IntroScreen> {
         showBackButton: true,
         back: const Icon(Icons.arrow_back),
         next: const Icon(Icons.arrow_forward),
-        done: const Text("Done", style: TextStyle(fontWeight: FontWeight.w600)),
+        done: const Text('Done', style: TextStyle(fontWeight: FontWeight.w600)),
         dotsDecorator: const DotsDecorator(
           size: Size(8.0, 8.0),
           activeSize: Size(16.0, 8.0),

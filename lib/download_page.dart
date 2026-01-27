@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:app_installer/app_installer.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:dio/dio.dart';
@@ -11,9 +10,6 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// ---------------------------------------------------------
-// 1. Data Model
-// ---------------------------------------------------------
 class GithubAsset {
   final int id;
   final String name;
@@ -39,17 +35,12 @@ class GithubAsset {
     );
   }
 }
-
-// ---------------------------------------------------------
-// 2. The Widget
-// ---------------------------------------------------------
 class DownloadPage extends StatefulWidget {
   final String userName;
   final String repoName;
   final List<RepoData> repos;
   final int currentIndex;
   final Function(int) onRepoChanged;
-
   const DownloadPage({
     super.key,
     required this.userName,
@@ -58,20 +49,15 @@ class DownloadPage extends StatefulWidget {
     required this.currentIndex,
     required this.onRepoChanged,
   });
-
   @override
   State<DownloadPage> createState() => _DownloadPageState();
 }
-
 class _DownloadPageState extends State<DownloadPage> {
   final Dio _dio = Dio();
   bool _isLoading = true;
-
   List<GithubAsset> _assets = [];
   String? _errorMessage;
-
   CancelToken? _cancelToken;
-
   @override
   void initState() {
     super.initState();
@@ -80,7 +66,6 @@ class _DownloadPageState extends State<DownloadPage> {
     _dio.options.receiveTimeout = const Duration(seconds: 30);
     _fetchReleases();
   }
-
   @override
   void dispose() {
     _cancelToken?.cancel('Widget disposed');
@@ -93,7 +78,6 @@ class _DownloadPageState extends State<DownloadPage> {
         _isLoading = true;
         _errorMessage = null;
       });
-
       var response = await _dio.get(
         'https://api.github.com/repos/${widget.userName}/${widget.repoName}/releases/latest',
         cancelToken: _cancelToken,

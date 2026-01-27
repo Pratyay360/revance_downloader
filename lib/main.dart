@@ -8,8 +8,7 @@ import 'package:rd_manager/repo_data.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ntfluttery/ntfluttery.dart';
-import 'simple_unified_push.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'secrets.dart';
 import 'dart:async';
 
@@ -27,57 +26,36 @@ Future<void> main(List<String> args) async {
   }, appRunner: initApp);
 }
 
-// Global variable to store args
 List<String> globalArgs = <String>[];
-
 void initApp() async {
   await NotificationHelper.init();
-  SimpleUnifiedPush().init();
-
-  // Check if the app is running in UnifiedPush background mode
-  // If it is, don't run the UI app
-  if (!globalArgs.contains("--unifiedpush-bg")) {
-    runApp(const MyApp());
-    startNtfyListener();
-  }
+  runApp(const MyApp());
+  startWSListener();
 }
 
 /// Long-running loop that long-polls the ntfy instance and shows local notifications.
 /// - Dedupes by title+message to avoid spamming repeated events.
 /// - On error, waits and reports to Sentry.
-void startNtfyListener() {
-  final client = NtflutteryService(
-    credentials: Credentials(username: ntfyUsername, password: ntfyToken),
-  );
-
-  String lastMessageKey = '';
-
+void startWSListener() {
   Future<void> pollLoop() async {
     while (true) {
       try {
-        final latest = await client.getLatestMessage(
-          '$instance/$topic/json?poll=1&since=latest',
-        );
-        final messageKey = '${latest.title}::${latest.message}';
-        if (messageKey != lastMessageKey) {
-          lastMessageKey = messageKey;
-
-          await NotificationHelper.showNotification(
-            title: latest.title,
-            body: latest.message,
+        final wsUrl = Uri.parse('wss://$ntfyHost/$ntfyTopic/ws');
+        final channel = WebSocketChannel.connect(wsUrl);
+        await channel.ready;
+        channel.stream.listen((event) {
+          NotificationHelper.showNotification(
+            title: event.title.toString(),
+            body: event.body.toString(),
           );
-        }
+        });
       } catch (e, st) {
-        // Simple backoff on errors
         await Future.delayed(const Duration(seconds: 10));
-        try {
-          await Sentry.captureException(e, stackTrace: st);
-        } catch (_) {}
+        await Sentry.captureException(e, stackTrace: st);
       }
     }
   }
 
-  // fire-and-forget
   pollLoop();
 }
 
