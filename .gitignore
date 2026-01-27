@@ -51,3 +51,5 @@ secrets.dart
 sentry.properties
 .vscode/
 .dart_tool
+
+.fvm/

@@ -8,7 +8,6 @@ import 'package:rd_manager/repo_data.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'secrets.dart';
 import 'dart:async';
 
@@ -30,33 +29,6 @@ List<String> globalArgs = <String>[];
 void initApp() async {
   await NotificationHelper.init();
   runApp(const MyApp());
-  startWSListener();
-}
-
-/// Long-running loop that long-polls the ntfy instance and shows local notifications.
-/// - Dedupes by title+message to avoid spamming repeated events.
-/// - On error, waits and reports to Sentry.
-void startWSListener() {
-  Future<void> pollLoop() async {
-    while (true) {
-      try {
-        final wsUrl = Uri.parse('wss://$ntfyHost/$ntfyTopic/ws');
-        final channel = WebSocketChannel.connect(wsUrl);
-        await channel.ready;
-        channel.stream.listen((event) {
-          NotificationHelper.showNotification(
-            title: event.title.toString(),
-            body: event.body.toString(),
-          );
-        });
-      } catch (e, st) {
-        await Future.delayed(const Duration(seconds: 10));
-        await Sentry.captureException(e, stackTrace: st);
-      }
-    }
-  }
-
-  pollLoop();
 }
 
 class MyApp extends StatefulWidget {
@@ -113,7 +85,7 @@ class _MyAppState extends State<MyApp> {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: TextStyle(color: colorScheme.inverseSurface),
+        contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
