@@ -16,18 +16,25 @@ class RepoData {
     this.isReadOnly = false,
   });
 
-  // Convert to JSON for saving
-  Map<String, dynamic> toJson() => {'userName': userName, 'repoName': repoName};
+  // Convert to JSON for saving. `isReadOnly` is included for future-proofing
+  Map<String, dynamic> toJson() => {
+    'userName': userName,
+    'repoName': repoName,
+    'isReadOnly': isReadOnly,
+  };
 
-  // Create from JSON
-  factory RepoData.fromJson(Map<String, dynamic> json) =>
-      RepoData(userName: json['userName'], repoName: json['repoName']);
+  // Create from JSON. Be forgiving for missing keys (backwards compatibility).
+  factory RepoData.fromJson(Map<String, dynamic> json) => RepoData(
+    userName: json['userName'] as String,
+    repoName: json['repoName'] as String,
+    isReadOnly: json['isReadOnly'] == true,
+  );
 }
 
 // Key for storage
 const String _repoStorageKey = 'repo_list';
 
-// Save the list of repos
+// Save the list of repos (exclude read-only entries)
 Future<void> saveRepoDataList(List<RepoData> repos) async {
   final prefs = await SharedPreferences.getInstance();
   final List<String> stringList = repos
@@ -37,16 +44,23 @@ Future<void> saveRepoDataList(List<RepoData> repos) async {
   await prefs.setStringList(_repoStorageKey, stringList);
 }
 
-// Load the list of repos
 Future<List<RepoData>> loadRepoDataList() async {
   final prefs = await SharedPreferences.getInstance();
   final List<String>? stringList = prefs.getStringList(_repoStorageKey);
 
-  List<RepoData> loaded = [];
+  final List<RepoData> loaded = [];
   if (stringList != null) {
-    loaded = stringList.map((stringRepo) {
-      return RepoData.fromJson(jsonDecode(stringRepo));
-    }).toList();
+    for (final stringRepo in stringList) {
+      try {
+        final decoded = jsonDecode(stringRepo);
+        if (decoded is Map<String, dynamic>) {
+          loaded.add(RepoData.fromJson(Map<String, dynamic>.from(decoded)));
+        }
+      } catch (e) {
+        // Skip malformed entries but keep running — do not crash the app on bad stored data.
+        debugPrint('Skipping invalid repo entry in storage: $e');
+      }
+    }
   }
 
   // Remove duplicate/stale default repo if it exists in storage
@@ -111,19 +125,59 @@ class _RepoDataListState extends State<RepoDataList> {
     }
   }
 
+  bool _isDuplicate(String user, String repo, {int? excludeIndex}) {
+    final u = user.toLowerCase();
+    final r = repo.toLowerCase();
+    for (var i = 0; i < _repos.length; i++) {
+      if (excludeIndex != null && i == excludeIndex) continue;
+      final existing = _repos[i];
+      if (existing.userName.toLowerCase() == u &&
+          existing.repoName.toLowerCase() == r) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<void> _addRepo(String user, String repo) async {
+    if (_isDuplicate(user, repo)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Repository already exists')),
+        );
+      }
+      return;
+    }
+
     final newRepo = RepoData(userName: user, repoName: repo);
     setState(() {
       _repos.add(newRepo);
     });
     await saveRepoDataList(_repos);
-    // Reload to re-sort if necessary (though simple add is fine)
-    // Actually we just added to end, but default is at 0.
-    // If we want to ensure order, maybe just reload?
-    // But modifying _repos directly is fine for now as default is at 0.
   }
 
   Future<void> _editRepo(int index, String user, String repo) async {
+    if (index < 0 || index >= _repos.length) return;
+    if (_repos[index].isReadOnly) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot edit read-only repository')),
+        );
+      }
+      return;
+    }
+
+    if (_isDuplicate(user, repo, excludeIndex: index)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Another repository with same name exists'),
+          ),
+        );
+      }
+      return;
+    }
+
     final updatedRepo = RepoData(userName: user, repoName: repo);
     setState(() {
       _repos[index] = updatedRepo;
@@ -132,7 +186,10 @@ class _RepoDataListState extends State<RepoDataList> {
   }
 
   Future<void> _deleteRepo(int index) async {
+    if (index < 0 || index >= _repos.length) return;
     final deletedRepo = _repos[index];
+    if (deletedRepo.isReadOnly) return;
+
     setState(() {
       _repos.removeAt(index);
     });
@@ -147,7 +204,8 @@ class _RepoDataListState extends State<RepoDataList> {
             label: 'Undo',
             onPressed: () async {
               setState(() {
-                _repos.insert(index, deletedRepo);
+                final insertIndex = index.clamp(0, _repos.length);
+                _repos.insert(insertIndex, deletedRepo);
               });
               await saveRepoDataList(_repos);
             },
@@ -201,13 +259,16 @@ class _RepoDataListState extends State<RepoDataList> {
           ),
           FilledButton(
             onPressed: () async {
-              if (userController.text.trim().isEmpty) {
+              final userText = userController.text.trim();
+              final repoText = repoController.text.trim();
+
+              if (userText.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Please enter a user name')),
                 );
                 return;
               }
-              if (repoController.text.trim().isEmpty) {
+              if (repoText.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Please enter a repo name')),
                 );
@@ -215,16 +276,9 @@ class _RepoDataListState extends State<RepoDataList> {
               }
 
               if (isEditing) {
-                await _editRepo(
-                  index,
-                  userController.text.trim(),
-                  repoController.text.trim(),
-                );
+                await _editRepo(index, userText, repoText);
               } else {
-                await _addRepo(
-                  userController.text.trim(),
-                  repoController.text.trim(),
-                );
+                await _addRepo(userText, repoText);
               }
 
               if (context.mounted) Navigator.pop(context);
@@ -233,7 +287,11 @@ class _RepoDataListState extends State<RepoDataList> {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      // Dispose controllers after the dialog is closed to avoid leaks.
+      userController.dispose();
+      repoController.dispose();
+    });
   }
 
   @override
