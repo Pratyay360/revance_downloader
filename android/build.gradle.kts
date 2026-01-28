@@ -24,8 +24,6 @@ subprojects {
         targetCompatibility = JavaVersion.VERSION_17.toString()
         // Add deprecation lint to help locate deprecated API usage in dependencies
         options.compilerArgs.add("-Xlint:deprecation")
-        // Suppress obsolete-options warning if desired (optional):
-        // options.compilerArgs.add("-Xlint:-options")
     }
 
     // Force an AndroidX compatibility artifact so legacy support library references are satisfied

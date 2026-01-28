@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/download_page.dart';
 import 'package:rd_manager/intro.dart';
-import 'package:rd_manager/notification_helper.dart';
 import 'package:rd_manager/repo_data.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rd_manager/websocket.dart';
 import 'secrets.dart';
 import 'dart:async';
 
@@ -27,7 +27,7 @@ Future<void> main(List<String> args) async {
 
 List<String> globalArgs = <String>[];
 void initApp() async {
-  await NotificationHelper.init();
+  WebSocketService.init();
   runApp(const MyApp());
 }
 

@@ -359,7 +359,7 @@ class _RepoEditDialogState extends State<_RepoEditDialog> {
     setState(() => _inFlight = true);
     try {
       await widget.onSubmit(user, repo);
-      if (context.mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _inFlight = false);
     }

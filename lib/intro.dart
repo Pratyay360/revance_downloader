@@ -45,11 +45,13 @@ class _IntroScreenState extends State<IntroScreen> {
     // 1. Validate Inputs
     if (_userController.text.trim().isEmpty ||
         _repoController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter both User Name and Repo Name'),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter both User Name and Repo Name'),
+          ),
+        );
+      }
       return; // Stop execution
     }
 
@@ -63,7 +65,10 @@ class _IntroScreenState extends State<IntroScreen> {
     }
 
     if (missingPermissions.isNotEmpty) {
-      if (context.mounted) _showPermissionAlert(context, missingPermissions);
+      if (mounted) {
+        // Use the state's context instead of the parameter after async operations
+        _showPermissionAlert(this.context, missingPermissions);
+      }
       return; // Stop execution if permissions missing
     }
 
@@ -80,10 +85,12 @@ class _IntroScreenState extends State<IntroScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('intro_completed', true);
 
-    if (context.mounted) {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const MyApp()));
+    if (mounted) {
+      if (this.context.mounted) {
+        Navigator.of(this.context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MyApp()),
+        );
+      }
     }
   }
 

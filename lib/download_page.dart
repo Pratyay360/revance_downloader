@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:app_installer/app_installer.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:rd_manager/notifications.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
@@ -450,13 +450,10 @@ class _DownloadPageState extends State<DownloadPage> {
 
       if ((res is Map && res['isSuccess'] == true) || res == true) {
         _snack('Install apk success');
-        await AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 2,
-            channelKey: 'basic_channel',
-            title: 'Installation Complete',
-            body: 'APK installed successfully',
-          ),
+        await NotificationsService.showNotification(
+          id: 2,
+          title: 'Installation Complete',
+          body: 'APK installed successfully',
         );
       } else {
         final String err = (res is Map)
@@ -1111,13 +1108,10 @@ class _AllAppsViewState extends State<AllAppsView> {
 
       if ((res is Map && res['isSuccess'] == true) || res == true) {
         _snack('Install apk success');
-        await AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 2,
-            channelKey: 'basic_channel',
-            title: 'Installation Complete',
-            body: 'APK installed successfully',
-          ),
+        await NotificationsService.showNotification(
+          id: 2,
+          title: 'Installation Complete',
+          body: 'APK installed successfully',
         );
       } else {
         final String err = (res is Map)
