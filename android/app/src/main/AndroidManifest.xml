@@ -6,7 +6,7 @@
 
     <application
         android:label="Rd Manager"
-        android:name="${applicationName}"
+        android:name="RD Manager"
         android:icon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         tools:replace="android:label"

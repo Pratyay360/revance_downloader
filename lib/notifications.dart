@@ -30,13 +30,14 @@ class NotificationsService {
         AndroidNotificationDetails(
       'basic_channel',
       'Basic Notifications',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+      importance: Importance.max,
+      priority: Priority.max,
       playSound: true,
     );
 
     const NotificationDetails details = NotificationDetails(
       android: androidDetails,
+      
     );
 
     await _plugin.show(id: id, title: title, body: body, notificationDetails: details);

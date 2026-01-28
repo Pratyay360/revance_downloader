@@ -30,8 +30,8 @@ class _IntroScreenState extends State<IntroScreen> {
   @override
   void initState() {
     super.initState();
-    _userController.text = secrets.userName;
-    _repoController.text = secrets.repoName;
+    _userController.text = secrets.user_name;
+    _repoController.text = secrets.repo_name;
   }
 
   @override
@@ -66,22 +66,16 @@ class _IntroScreenState extends State<IntroScreen> {
 
     if (missingPermissions.isNotEmpty) {
       if (mounted) {
-        // Use the state's context instead of the parameter after async operations
         _showPermissionAlert(this.context, missingPermissions);
       }
-      return; // Stop execution if permissions missing
+      return;
     }
-
-    // 3. Save the entered repo data if it's not the default
     final user = _userController.text.trim();
     final repo = _repoController.text.trim();
-
-    if (user != secrets.userName || repo != secrets.repoName) {
-      final newRepo = RepoData(userName: user, repoName: repo);
+    final newRepo = RepoData(userName: user, repoName: repo);
+    if (secrets.user_name != user || secrets.repo_name != repo) {
       await saveRepoDataList([newRepo]);
     }
-
-    // 4. Mark Intro Complete and Navigate
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('intro_completed', true);
 

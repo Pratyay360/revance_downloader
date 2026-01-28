@@ -8,7 +8,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sentry_logging/sentry_logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rd_manager/websocket.dart';
-import 'secrets.dart';
+import 'package:rd_manager/secrets.dart';
 import 'dart:async';
 
 Future<void> main(List<String> args) async {
@@ -191,7 +191,6 @@ class _RepoSelectorState extends State<RepoSelector> {
   @override
   void initState() {
     super.initState();
-    // Default to "All Apps" (-1)
     _selectedRepoIndex = -1;
   }
 
