@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show CustomSemanticsAction;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rd_manager/secrets.dart' as secrets;
 
@@ -83,20 +84,20 @@ class RepoStorage {
           }
         } catch (e) {
           // keep running on malformed entries
-          debugPrint('Skipping invalid repo entry in storage: $e');
+          Sentry.captureException(e);
         }
       }
     }
 
     // ensure the secret/default repo is always first and read-only
     result.removeWhere(
-      (r) => r.userName == secrets.user_name && r.repoName == secrets.repo_name,
+      (r) => r.userName == secrets.userName1 && r.repoName == secrets.repoName1,
     );
     result.insert(
       0,
       RepoData(
-        userName: secrets.user_name,
-        repoName: secrets.repo_name,
+        userName: secrets.userName1,
+        repoName: secrets.repoName1,
         isReadOnly: true,
       ),
     );

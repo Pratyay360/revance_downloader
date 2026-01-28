@@ -16,6 +16,11 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
     if (project.name != "app") {
         project.evaluationDependsOn(":app")
+        project.afterEvaluate {
+            project.tasks.named("assemble") {
+                dependsOn(":app:assemble")
+            }
+        }
     }
 
     // Ensure Java compile settings for subprojects to avoid legacy Java 8 warnings

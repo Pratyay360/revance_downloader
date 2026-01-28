@@ -50,10 +50,7 @@ jobs:
 
       - name: Build APK
         run: |
-          flutter build apk --release \
-            --split-per-abi \
-            --build-name="1.0.${{ github.run_number }}" \
-            --build-number=${{ github.run_number }}
+          flutter build apk --release --split-per-abi
 
       - name: Push to Releases
         uses: ncipollo/release-action@v1
