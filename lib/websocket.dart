@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:rd_manager/notifications.dart';
 import 'package:rd_manager/secrets.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketService {
@@ -13,22 +13,20 @@ class WebSocketService {
 
       _channel!.stream.listen(
         (message) {
-          // Show notification on message received
-          NotificationsService.showNotification(
-            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            title: 'New Message',
-            body: message.toString(),
-          );
+          if (message.event.toString() != 'open') {
+            NotificationsService.showNotification(
+              id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              title: message.event.toString(),
+              body: message.message.toString(),
+            );
+          }
         },
         onError: (error) {
-          debugPrint('WebSocket Error: $error');
-        },
-        onDone: () {
-          debugPrint('WebSocket Connection Closed');
+          Sentry.captureException(error);
         },
       );
     } catch (e) {
-      debugPrint('WebSocket Init Error: $e');
+      Sentry.captureException(e);
     }
   }
 

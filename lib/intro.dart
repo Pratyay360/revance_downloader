@@ -30,8 +30,8 @@ class _IntroScreenState extends State<IntroScreen> {
   @override
   void initState() {
     super.initState();
-    _userController.text = secrets.userName;
-    _repoController.text = secrets.repoName;
+    _userController.text = secrets.userName1;
+    _repoController.text = secrets.repoName1;
   }
 
   @override
@@ -76,7 +76,7 @@ class _IntroScreenState extends State<IntroScreen> {
     final user = _userController.text.trim();
     final repo = _repoController.text.trim();
 
-    if (user != secrets.userName || repo != secrets.repoName) {
+    if (user != secrets.userName1 || repo != secrets.repoName1) {
       final newRepo = RepoData(userName: user, repoName: repo);
       await saveRepoDataList([newRepo]);
     }
@@ -87,9 +87,9 @@ class _IntroScreenState extends State<IntroScreen> {
 
     if (mounted) {
       if (this.context.mounted) {
-        Navigator.of(this.context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MyApp()),
-        );
+        Navigator.of(
+          this.context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const MyApp()));
       }
     }
   }

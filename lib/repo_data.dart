@@ -18,10 +18,10 @@ class RepoData {
   });
 
   Map<String, dynamic> toJson() => {
-        'userName': userName,
-        'repoName': repoName,
-        'isReadOnly': isReadOnly,
-      };
+    'userName': userName,
+    'repoName': repoName,
+    'isReadOnly': isReadOnly,
+  };
 
   /// Be lenient when parsing stored data — callers (load) handle malformed
   /// entries by skipping them.
@@ -39,7 +39,8 @@ class RepoData {
   }
 
   @override
-  String toString() => 'RepoData($userName/$repoName${isReadOnly ? ', readOnly' : ''})';
+  String toString() =>
+      'RepoData($userName/$repoName${isReadOnly ? ', readOnly' : ''})';
 
   @override
   bool operator ==(Object other) =>
@@ -50,7 +51,8 @@ class RepoData {
           isReadOnly == other.isReadOnly;
 
   @override
-  int get hashCode => Object.hash(userName.toLowerCase(), repoName.toLowerCase(), isReadOnly);
+  int get hashCode =>
+      Object.hash(userName.toLowerCase(), repoName.toLowerCase(), isReadOnly);
 }
 
 const String _repoStorageKey = 'repo_list';
@@ -88,10 +90,16 @@ class RepoStorage {
     }
 
     // ensure the secret/default repo is always first and read-only
-    result.removeWhere((r) => r.userName == secrets.userName && r.repoName == secrets.repoName);
+    result.removeWhere(
+      (r) => r.userName == secrets.userName1 && r.repoName == secrets.repoName1,
+    );
     result.insert(
       0,
-      RepoData(userName: secrets.userName, repoName: secrets.repoName, isReadOnly: true),
+      RepoData(
+        userName: secrets.userName1,
+        repoName: secrets.repoName1,
+        isReadOnly: true,
+      ),
     );
 
     return result;
@@ -141,10 +149,14 @@ class _RepoDataListState extends State<RepoDataList> {
         content: Text(
           text,
           style: TextStyle(
-            color: isError ? Theme.of(context).colorScheme.onErrorContainer : null,
+            color: isError
+                ? Theme.of(context).colorScheme.onErrorContainer
+                : null,
           ),
         ),
-        backgroundColor: isError ? Theme.of(context).colorScheme.errorContainer : null,
+        backgroundColor: isError
+            ? Theme.of(context).colorScheme.errorContainer
+            : null,
       ),
     );
   }
@@ -155,7 +167,8 @@ class _RepoDataListState extends State<RepoDataList> {
     return _repos.asMap().entries.any((entry) {
       if (excludeIndex != null && entry.key == excludeIndex) return false;
       final existing = entry.value;
-      return existing.userName.toLowerCase() == u && existing.repoName.toLowerCase() == r;
+      return existing.userName.toLowerCase() == u &&
+          existing.repoName.toLowerCase() == r;
     });
   }
 
@@ -218,7 +231,8 @@ class _RepoDataListState extends State<RepoDataList> {
         initialUser: initialUser,
         initialRepo: initialRepo,
         isEditing: index != null,
-        onSubmit: (user, repo) => index == null ? _addRepo(user, repo) : _editRepo(index, user, repo),
+        onSubmit: (user, repo) =>
+            index == null ? _addRepo(user, repo) : _editRepo(index, user, repo),
       ),
     );
   }
@@ -235,81 +249,110 @@ class _RepoDataListState extends State<RepoDataList> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _repos.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.folder_off_outlined,
-                        size: 64,
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                      const SizedBox(height: 16),
-                      Text('No repositories found', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Add your first repository to get started',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.folder_off_outlined,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.outline,
                   ),
-                )
-              : ListView.builder(
-                  itemCount: _repos.length,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemBuilder: (context, index) {
-                    final repo = _repos[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      elevation: 1,
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Icon(Icons.code, color: Theme.of(context).colorScheme.onPrimaryContainer),
-                        ),
-                        title: Text(
-                          repo.repoName,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                        subtitle: Text(
-                          repo.userName,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                        trailing: repo.isReadOnly
-                            ? Tooltip(
-                                message: 'Default repository (Read-only)',
-                                child: Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.outline),
-                              )
-                            : Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
-                                    tooltip: 'Edit repository',
-                                    onPressed: () => _showAddDialog(index: index, initialUser: repo.userName, initialRepo: repo.repoName),
-                                  ),
-                                  Semantics(
-                                    customSemanticsActions: {
-                                      CustomSemanticsAction(label: 'delete'): () => _deleteRepo(index),
-                                    },
-                                    child: IconButton(
-                                      icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
-                                      tooltip: 'Delete repository',
-                                      onPressed: () => _deleteRepo(index),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No repositories found',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Add your first repository to get started',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: _repos.length,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemBuilder: (context, index) {
+                final repo = _repos[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  elevation: 1,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.code,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    title: Text(
+                      repo.repoName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    subtitle: Text(
+                      repo.userName,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    trailing: repo.isReadOnly
+                        ? Tooltip(
+                            message: 'Default repository (Read-only)',
+                            child: Icon(
+                              Icons.lock_outline,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.edit,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                tooltip: 'Edit repository',
+                                onPressed: () => _showAddDialog(
+                                  index: index,
+                                  initialUser: repo.userName,
+                                  initialRepo: repo.repoName,
+                                ),
+                              ),
+                              Semantics(
+                                customSemanticsActions: {
+                                  CustomSemanticsAction(label: 'delete'): () =>
+                                      _deleteRepo(index),
+                                },
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  tooltip: 'Delete repository',
+                                  onPressed: () => _deleteRepo(index),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -333,8 +376,12 @@ class _RepoEditDialog extends StatefulWidget {
 }
 
 class _RepoEditDialogState extends State<_RepoEditDialog> {
-  late final TextEditingController _userController = TextEditingController(text: widget.initialUser);
-  late final TextEditingController _repoController = TextEditingController(text: widget.initialRepo);
+  late final TextEditingController _userController = TextEditingController(
+    text: widget.initialUser,
+  );
+  late final TextEditingController _repoController = TextEditingController(
+    text: widget.initialRepo,
+  );
   bool _inFlight = false;
 
   @override
@@ -348,11 +395,15 @@ class _RepoEditDialogState extends State<_RepoEditDialog> {
     final user = _userController.text.trim();
     final repo = _repoController.text.trim();
     if (user.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a user name')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a user name')));
       return;
     }
     if (repo.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a repo name')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a repo name')));
       return;
     }
 
@@ -378,7 +429,9 @@ class _RepoEditDialogState extends State<_RepoEditDialog> {
               labelText: 'User Name',
               prefixIcon: const Icon(Icons.person),
               hintText: 'e.g., bitwarden',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -388,14 +441,22 @@ class _RepoEditDialogState extends State<_RepoEditDialog> {
               labelText: 'Repo Name',
               prefixIcon: const Icon(Icons.code),
               hintText: 'e.g., android',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: _inFlight ? null : _submit, child: Text(widget.isEditing ? 'Save' : 'Add')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _inFlight ? null : _submit,
+          child: Text(widget.isEditing ? 'Save' : 'Add'),
+        ),
       ],
     );
   }
