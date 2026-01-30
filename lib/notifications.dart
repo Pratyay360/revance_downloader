@@ -16,6 +16,22 @@ class NotificationsService {
     );
 
     await _plugin.initialize(settings: initSettings);
+
+    // Create the notification channel for Android 8.0+
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'basic_channel', // id
+      'Basic Notifications', // name
+      description: 'Channel for basic app notifications',
+      importance: Importance.max,
+      playSound: true,
+    );
+
+    final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidPlugin?.createNotificationChannel(channel);
+
     _initialized = true;
   }
 
@@ -40,6 +56,11 @@ class NotificationsService {
       
     );
 
-    await _plugin.show(id: id, title: title, body: body, notificationDetails: details);
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
   }
 }
