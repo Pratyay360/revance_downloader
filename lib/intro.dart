@@ -65,15 +65,15 @@ class _IntroScreenState extends State<IntroScreen> {
       return;
     }
 
-    final user = '';
-    final repo = '';
+    final user = _userController.text.trim();
+    final repo = _repoController.text.trim();
+    
 
     if (user != secrets.userName1 || repo != secrets.repoName1) {
       final newRepo = RepoData(userName: user, repoName: repo);
       await saveRepoDataList([newRepo]);
     }
 
-    // 4. Mark Intro Complete and Navigate
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('intro_completed', true);
 
