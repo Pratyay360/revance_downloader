@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show CustomSemanticsAction;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'secrets.dart' as secrets;
+import 'package:sentry_flutter/sentry_flutter.dart';
+
 
 /// Lightweight value object representing a repository.
 class RepoData {
@@ -84,7 +86,7 @@ class RepoStorage {
           }
         } catch (e) {
           // keep running on malformed entries
-          debugPrint('Skipping invalid repo entry in storage: $e');
+          Sentry.captureException(e);
         }
       }
     }

@@ -39,8 +39,6 @@ jobs:
       - name: Setup Signing Configuration
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/keystore.jks
-
-          # Create key.properties
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
@@ -48,9 +46,7 @@ jobs:
           echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
 
       - name: Build APK
-        run: |
-          flutter build apk --release \
-            --split-per-abi
+        run: flutter build apk --release --target-platform  android-arm64 --build-name "RDmanager"
 
       - name: Push to Releases
         uses: ncipollo/release-action@v1

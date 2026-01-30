@@ -28,21 +28,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Intent filters for UnifiedPush -->
-            <intent-filter>
-                <action
-                    android:name="org.unifiedpush.android.distributor.feature.UNIFIED_PUSH"
-                />
-            </intent-filter>
-        </activity>        <!-- Service for UnifiedPush -->
-        <service
-            android:name="org.unifiedpush.flutter.connector.UnifiedPushService"
-            android:enabled="true"
-            android:exported="true"
-            tools:replace="android:exported"
-        >
-        </service>
-
         <meta-data android:name="flutterEmbedding" android:value="2" />
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -77,18 +62,24 @@
     />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
+    <receiver
+        android:exported="false"
+        android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+        android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+    >
+        <intent-filter>
+            <action android:name="android.intent.action.BOOT_COMPLETED" />
+            <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+        </intent-filter>
+    </receiver>
+    
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
 
-        <!-- Query for UnifiedPush distributors -->
-        <intent>
-            <action
-                android:name="org.unifiedpush.android.distributor.REGISTER"
-            />
-        </intent>
     </queries>
 </manifest>

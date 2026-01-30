@@ -1,38 +1,27 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationsService {
-  static final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
-  static bool _initialized = false;
+  static final FlutterLocalNotificationsPlugin
+  _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  static Future<void> init() async {
-    if (_initialized) return;
+  static Future<void> initialize() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('app_icon');
 
-    const AndroidInitializationSettings androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
 
-    final InitializationSettings initSettings = InitializationSettings(
-      android: androidInit,
+    await _flutterLocalNotificationsPlugin.initialize(
+      settings: initializationSettings,
+      onDidReceiveNotificationResponse: (payload) {},
     );
 
-    await _plugin.initialize(settings: initSettings);
-
-    // Create the notification channel for Android 8.0+
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'basic_channel', // id
-      'Basic Notifications', // name
-      description: 'Channel for basic app notifications',
-      importance: Importance.max,
-      playSound: true,
-    );
-
-    final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
-        _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-
-    await androidPlugin?.createNotificationChannel(channel);
-
-    _initialized = true;
+    // Request permissions for Android
+    await _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
   }
 
   static Future<void> showNotification({
@@ -40,27 +29,25 @@ class NotificationsService {
     required String title,
     required String body,
   }) async {
-    await init();
-
-    const AndroidNotificationDetails androidDetails =
+    const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
-      'basic_channel',
-      'Basic Notifications',
-      importance: Importance.max,
-      priority: Priority.max,
-      playSound: true,
+          'main_channel',
+          'Main Channel',
+          channelDescription: 'Main channel for app notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+          ticker: 'ticker',
+        );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidNotificationDetails,
     );
 
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-      
-    );
-
-    await _plugin.show(
+    await _flutterLocalNotificationsPlugin.show(
       id: id,
       title: title,
       body: body,
-      notificationDetails: details,
+      notificationDetails: notificationDetails,
     );
   }
 }

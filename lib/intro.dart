@@ -15,12 +15,8 @@ class IntroScreen extends StatefulWidget {
 
 class _IntroScreenState extends State<IntroScreen> {
   final introKey = GlobalKey<IntroductionScreenState>();
-
-  // Repo data controllers
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _repoController = TextEditingController();
-
-  // List of permissions
   final List<Permission> _requiredPermissions = [
     Permission.manageExternalStorage,
     Permission.requestInstallPackages,
@@ -52,10 +48,8 @@ class _IntroScreenState extends State<IntroScreen> {
           ),
         );
       }
-      return; // Stop execution
+      return;
     }
-
-    // 2. Validate Permissions
     List<String> missingPermissions = [];
     for (var permission in _requiredPermissions) {
       if (!(await permission.isGranted)) {
@@ -66,15 +60,13 @@ class _IntroScreenState extends State<IntroScreen> {
 
     if (missingPermissions.isNotEmpty) {
       if (mounted) {
-        // Use the state's context instead of the parameter after async operations
         _showPermissionAlert(this.context, missingPermissions);
       }
-      return; // Stop execution if permissions missing
+      return;
     }
 
-    // 3. Save the entered repo data if it's not the default
-    final user = _userController.text.trim();
-    final repo = _repoController.text.trim();
+    final user = '';
+    final repo = '';
 
     if (user != secrets.userName1 || repo != secrets.repoName1) {
       final newRepo = RepoData(userName: user, repoName: repo);
@@ -185,7 +177,6 @@ class _IntroScreenState extends State<IntroScreen> {
             icon: Icons.android,
             permission: Permission.requestInstallPackages,
           ),
-          // The Input Page
           PageViewModel(
             title: 'Repository Details',
             body: 'Enter the default GitHub repository details for patches.',

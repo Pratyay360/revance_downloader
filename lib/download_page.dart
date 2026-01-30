@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:app_installer/app_installer.dart';
-import 'package:rd_manager/notifications.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/repo_data.dart';
+import 'package:rd_manager/notifications.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,6 +35,7 @@ class GithubAsset {
     );
   }
 }
+
 class DownloadPage extends StatefulWidget {
   final String userName;
   final String repoName;
@@ -52,6 +53,7 @@ class DownloadPage extends StatefulWidget {
   @override
   State<DownloadPage> createState() => _DownloadPageState();
 }
+
 class _DownloadPageState extends State<DownloadPage> {
   final Dio _dio = Dio();
   bool _isLoading = true;
@@ -66,6 +68,7 @@ class _DownloadPageState extends State<DownloadPage> {
     _dio.options.receiveTimeout = const Duration(seconds: 30);
     _fetchReleases();
   }
+
   @override
   void dispose() {
     _cancelToken?.cancel('Widget disposed');
