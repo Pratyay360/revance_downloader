@@ -47,7 +47,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initializeNotifications() async {
-    await NotificationsService.initialize();
+    await NotificationsService.init();
+    await NotificationsService.register();
   }
 
   ThemeData _buildTheme(ColorScheme colorScheme) {

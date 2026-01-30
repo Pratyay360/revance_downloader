@@ -1,27 +1,27 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 class NotificationsService {
-  static final FlutterLocalNotificationsPlugin
-  _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+  static bool _initialized = false;
 
-  static Future<void> initialize() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('app_icon');
+  static Future<void> init() async {
+    if (_initialized) return;
 
-    final InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+    try {
+      const AndroidInitializationSettings androidInit =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    await _flutterLocalNotificationsPlugin.initialize(
-      settings: initializationSettings,
-      onDidReceiveNotificationResponse: (payload) {},
-    );
+      final InitializationSettings initSettings = InitializationSettings(
+        android: androidInit,
+      );
 
-    // Request permissions for Android
-    await _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
+      await _plugin.initialize(settings: initSettings);
+      _initialized = true;
+    } catch (e) {
+      Sentry.captureException(e);
+    }
   }
 
   static Future<void> showNotification({
@@ -29,25 +29,46 @@ class NotificationsService {
     required String title,
     required String body,
   }) async {
-    const AndroidNotificationDetails androidNotificationDetails =
+    await init();
+
+    // Skip notification if initialization failed
+    if (!_initialized) {
+      Sentry.captureMessage(
+        'Notifications not initialized, skipping notification',
+      );
+      return;
+    }
+
+    const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-          'main_channel',
-          'Main Channel',
-          channelDescription: 'Main channel for app notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-          ticker: 'ticker',
+          'basic_channel',
+          'Basic Notifications',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          playSound: true,
         );
 
-    const NotificationDetails notificationDetails = NotificationDetails(
-      android: androidNotificationDetails,
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
     );
 
-    await _flutterLocalNotificationsPlugin.show(
+    await _plugin.show(
       id: id,
       title: title,
       body: body,
-      notificationDetails: notificationDetails,
+      notificationDetails: details,
     );
+  }
+
+  static Future<void> register() async {
+    await init();
+
+    // Skip registration if initialization failed
+    if (!_initialized) {
+      Sentry.captureMessage(
+        'Notifications not initialized, skipping registration',
+      );
+      return;
+    }
   }
 }

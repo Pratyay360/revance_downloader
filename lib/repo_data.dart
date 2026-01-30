@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'secrets.dart' as secrets;
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-
 /// Lightweight value object representing a repository.
 class RepoData {
   final String userName;
@@ -20,8 +19,8 @@ class RepoData {
   });
 
   Map<String, dynamic> toJson() => {
-    'userName': userName,
-    'repoName': repoName,
+    'userName': secrets.userName1,
+    'repoName': secrets.repoName1,
     'isReadOnly': isReadOnly,
   };
 
