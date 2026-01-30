@@ -1,23 +1,17 @@
-name: Cleanup workflow runs
+name: GitHub Cleanup
 
 on:
-  schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight
+  workflow_call:
+    secrets:
+      GH_TOKEN:
+        required: true
   workflow_dispatch:
-
-permissions:
-  actions: write
-  contents: read
+  schedule:
+    - cron: '0 5 */5 * *'
 
 jobs:
   cleanup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Delete old failed runs
-        uses: Mattraks/delete-workflow-runs@v2
-        with:
-          token: ${{ github.token }}
-          repository: ${{ github.repository }}
-         
-      
-
+    name: GitHub Cleanup
+    uses: nikhilbadyal/ghactions/.github/workflows/github-cleanup.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
