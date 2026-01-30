@@ -18,6 +18,6 @@ jobs:
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
-          delete_run_by_conclusion_pattern: "failure,cancelled,skipped"
+         
       
 
