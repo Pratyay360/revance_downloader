@@ -46,8 +46,7 @@ jobs:
           echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
 
       - name: Build APK
-        run: flutter build apk --release --target-platform  android-arm64 --build-name "RDmanager"
-
+        run: flutter build apk --release --target-platform  android-arm64 --build-name "RDmanager v1.0.${{ github.run_number }}"
       - name: Push to Releases
         uses: ncipollo/release-action@v1
         with:
@@ -55,7 +54,7 @@ jobs:
           allowUpdates: true
           tag: v1.0.${{ github.run_number }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          name: "RDmanager"
+          name: "RDmanager v1.0.${{ github.run_number }}"
 
       - name: ntfy-notifications
         uses: niniyas/ntfy-action@master
