@@ -67,4 +67,4 @@ jobs:
           url: ${{ secrets.NTFY_URL }}
           topic: ${{ secrets.NTFY_TOPIC }}
           title: "RDmanager Build #${{ github.run_number }}: ${{ job.status }}"
-          details: "Build #${{ github.run_number }}: ${{ job.status }} - v1.0.${{ github.run_number }}"
+          details: "Build  #${{ github.run_number }}: ${{ job.status }} - v1.0.${{ github.run_number }}"
