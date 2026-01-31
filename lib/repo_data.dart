@@ -18,25 +18,30 @@ class RepoData {
     this.isReadOnly = false,
   });
 
+  RepoData copyWith({String? userName, String? repoName, bool? isReadOnly}) {
+    return RepoData(
+      userName: userName ?? this.userName,
+      repoName: repoName ?? this.repoName,
+      isReadOnly: isReadOnly ?? this.isReadOnly,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
-    'userName': secrets.userName1,
-    'repoName': secrets.repoName1,
+    'userName': userName,
+    'repoName': repoName,
     'isReadOnly': isReadOnly,
   };
 
   /// Be lenient when parsing stored data — callers (load) handle malformed
   /// entries by skipping them.
-  factory RepoData.fromJson(Map<String, dynamic> json) {
+  static RepoData fromJson(Map<String, dynamic> json) {
     final user = json['userName'];
     final repo = json['repoName'];
+    final readOnly = json['isReadOnly'] as bool? ?? false;
     if (user is! String || repo is! String) {
       throw const FormatException('Invalid RepoData JSON');
     }
-    return RepoData(
-      userName: user,
-      repoName: repo,
-      isReadOnly: json['isReadOnly'] == true,
-    );
+    return RepoData(userName: user, repoName: repo, isReadOnly: readOnly);
   }
 
   @override
@@ -90,19 +95,23 @@ class RepoStorage {
       }
     }
 
-    // ensure the secret/default repo is always first and read-only
-    result.removeWhere(
-      (r) => r.userName == secrets.userName1 && r.repoName == secrets.repoName1,
-    );
-    result.insert(
-      0,
+    // ensure the secret/default repos are always first and read-only
+    final List<RepoData> defaultRepos = [
       RepoData(
         userName: secrets.userName1,
         repoName: secrets.repoName1,
         isReadOnly: true,
       ),
-    );
+    ];
 
+    for (final dr in defaultRepos) {
+      result.removeWhere(
+        (r) =>
+            r.userName.toLowerCase() == dr.userName.toLowerCase() &&
+            r.repoName.toLowerCase() == dr.repoName.toLowerCase(),
+      );
+    }
+    result.insertAll(0, defaultRepos);
     return result;
   }
 }

@@ -9,6 +9,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
         tools:replace="android:label"
     >
 
@@ -57,9 +58,6 @@
                 />
                 <action
                     android:name="android.intent.action.QUICKBOOT_POWERON"
-                />
-                <action
-                    android:name="com.htc.intent.action.QUICKBOOT_POWERON"
                 />
             </intent-filter>
         </receiver>
