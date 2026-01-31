@@ -7,7 +7,6 @@ on:
         required: true
   workflow_dispatch:
 
-
 jobs:
   cleanup:
     name: GitHub Cleanup
