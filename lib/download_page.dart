@@ -84,6 +84,7 @@ class _DownloadPageState extends State<DownloadPage> {
       });
       var response = await _dio.get(
         'https://api.github.com/repos/${widget.userName}/${widget.repoName}/releases/latest',
+        cancelToken: _cancelToken,
       );
       final List<dynamic> assetsJson = response.data['assets'] ?? [];
       if (mounted) {
@@ -479,6 +480,7 @@ class _DownloadPageState extends State<DownloadPage> {
         'name': asset.name,
         'path': savePath,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.close();
     } catch (e) {
       Sentry.captureMessage('DB Error: $e');
     }
@@ -488,22 +490,15 @@ class _DownloadPageState extends State<DownloadPage> {
 
   Future<void> _installApk(String filePath) async {
     try {
-      final dynamic res = AppInstaller.installApk(filePath);
+      await AppInstaller.installApk(filePath);
       if (!mounted) return;
 
-      if ((res is Map && res['isSuccess'] == true) || res == true) {
-        _snack('Install apk success');
-        await NotificationsService.showNotification(
-          id: 2,
-          title: 'Installation Complete',
-          body: 'APK installed successfully',
-        );
-      } else {
-        final String err = (res is Map)
-            ? (res['errorMessage']?.toString() ?? res.toString())
-            : res.toString();
-        _snack('install apk fail: $err');
-      }
+      _snack('Installation started');
+      await NotificationsService.showNotification(
+        id: 2,
+        title: 'Installation',
+        body: 'Installer opened successfully',
+      );
     } catch (e) {
       if (!mounted) return;
       _snack('Install failed: $e');
@@ -751,11 +746,14 @@ class _AllAppsViewState extends State<AllAppsView> {
       // Fetch from all repositories
       for (final repo in widget.repos) {
         try {
-          var response = await _dio.get('');
+          var response = await _dio.get(
+            'https://api.github.com/repos/${repo.userName}/${repo.repoName}/releases/latest',
+          );
 
-          if (response.statusCode == 200) {
-            final List<dynamic> assetsJson = response.data['assets'] ?? [];
-            final repoAssets = assetsJson
+          final data = response.data;
+          if (data is Map<String, dynamic> && data.containsKey('assets')) {
+            final List<dynamic> assetsJson = data['assets'] ?? [];
+            final List<GithubAsset> repoAssets = assetsJson
                 .map((e) => GithubAsset.fromJson(e))
                 .where(
                   (asset) =>
@@ -1167,22 +1165,15 @@ class _AllAppsViewState extends State<AllAppsView> {
 
   Future<void> _installApk(String filePath) async {
     try {
-      final dynamic res = AppInstaller.installApk(filePath);
+      await AppInstaller.installApk(filePath);
       if (!mounted) return;
 
-      if ((res is Map && res['isSuccess'] == true) || res == true) {
-        _snack('Install apk success');
-        await NotificationsService.showNotification(
-          id: 2,
-          title: 'Installation Complete',
-          body: 'APK installed successfully',
-        );
-      } else {
-        final String err = (res is Map)
-            ? (res['errorMessage']?.toString() ?? res.toString())
-            : res.toString();
-        _snack('install apk fail: $err');
-      }
+      _snack('Installation started');
+      await NotificationsService.showNotification(
+        id: 2,
+        title: 'Installation',
+        body: 'Installer opened successfully',
+      );
     } catch (e) {
       if (!mounted) return;
       _snack('Install failed: $e');
