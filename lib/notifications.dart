@@ -1,4 +1,3 @@
-
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -10,7 +9,6 @@ class NotificationsService {
   static Future<void> init() async {
     if (_initialized) return;
 
-
     try {
       const AndroidInitializationSettings androidInit =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -19,18 +17,15 @@ class NotificationsService {
         android: androidInit,
       );
 
-
       await _plugin.initialize(settings: initSettings);
       _initialized = true;
     } catch (e) {
       Sentry.captureException(e);
     }
-
   }
 
   static Future<void> showNotification({
-
-@@ -29,25 +29,46 @@ class NotificationsService {
+    required int id,
     required String title,
     required String body,
   }) async {
@@ -51,7 +46,6 @@ class NotificationsService {
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
           playSound: true,
-
         );
 
     const NotificationDetails details = NotificationDetails(
