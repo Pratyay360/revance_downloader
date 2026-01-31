@@ -1,15 +1,16 @@
 name: GitHub Cleanup
 
 on:
-  workflow_call:
-    secrets:
-      GH_TOKEN:
-        required: true
   workflow_dispatch:
+ 
 
 jobs:
   cleanup:
-    name: GitHub Cleanup
-    uses: nikhilbadyal/ghactions/.github/workflows/github-cleanup.yml@main
-    secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          retain_days: 7
+          keep_minimum_runs: 5
