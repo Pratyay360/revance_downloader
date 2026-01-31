@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:app_installer/app_installer.dart';
 import 'package:dio/dio.dart';
@@ -27,11 +28,11 @@ class GithubAsset {
 
   factory GithubAsset.fromJson(Map<String, dynamic> json) {
     return GithubAsset(
-      id: json['id'],
-      name: json['name'],
-      downloadUrl: json['browser_download_url'] ?? '',
-      size: json['size'] ?? 0,
-      digest: json['digest'] ?? '',
+      id: json['id']!,
+      name: json['name']!,
+      downloadUrl: json['browser_download_url']!,
+      size: json['size']!,
+      digest: json['digest']!,
     );
   }
 }
@@ -83,28 +84,43 @@ class _DownloadPageState extends State<DownloadPage> {
       });
       var response = await _dio.get(
         'https://api.github.com/repos/${widget.userName}/${widget.repoName}/releases/latest',
-        cancelToken: _cancelToken,
       );
-      if (response.statusCode == 200) {
-        final List<dynamic> assetsJson = response.data['assets'] ?? [];
-        if (mounted) {
-          setState(() {
-            _assets = assetsJson
-                .map((e) => GithubAsset.fromJson(e))
-                .where(
-                  (asset) =>
-                      asset.name.toLowerCase().endsWith('.apk') ||
-                      asset.name.toLowerCase().endsWith('.aab'),
-                )
-                .toList();
-            _isLoading = false;
-          });
-        }
-      } else {
-        throw Exception('Failed to load: ${response.statusCode}');
+      final List<dynamic> assetsJson = response.data['assets'] ?? [];
+      if (mounted) {
+        setState(() {
+          _assets = assetsJson
+              .map((e) => GithubAsset.fromJson(e))
+              .where(
+                (asset) =>
+                    asset.name.toLowerCase().endsWith('.apk') ||
+                    asset.name.toLowerCase().endsWith('.aab'),
+              )
+              .toList();
+          _isLoading = false;
+        });
+      }
+    } on DioException catch (e) {
+      Sentry.captureException(e);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          if (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.receiveTimeout ||
+              e.type == DioExceptionType.sendTimeout) {
+            _errorMessage = 'Connection timed out. Please check your internet.';
+          } else {
+            _errorMessage = 'Failed to fetch releases: ${e.message}';
+          }
+        });
       }
     } catch (e) {
       Sentry.captureException(e);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'An unexpected error occurred.';
+        });
+      }
     }
   }
 
@@ -275,6 +291,27 @@ class _DownloadPageState extends State<DownloadPage> {
     // C. Define Download Logic
     // FileDownloader.downloadFile returns the downloaded File object or null if failed.
     // It downloads to the public Downloads directory by default.
+    // D. Watchdog Timer
+    // If no progress for 60 seconds, cancel the download.
+    Timer? watchdog;
+    void resetWatchdog() {
+      watchdog?.cancel();
+      watchdog = Timer(const Duration(seconds: 60), () {
+        if (!isCancelled) {
+          isCancelled = true;
+          if (downloadId != null) {
+            FileDownloader.cancelDownload(downloadId!);
+          }
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.pop(context); // Close dialog
+            _snack('Download timed out due to inactivity.');
+          }
+        }
+      });
+    }
+
+    resetWatchdog(); // Initial start
+
     FileDownloader.downloadFile(
       url: asset.downloadUrl,
       name: asset.name,
@@ -284,11 +321,13 @@ class _DownloadPageState extends State<DownloadPage> {
       notificationType: NotificationType.all,
       onProgress: (name, progress) {
         if (isCancelled) return;
+        resetWatchdog();
         // progress is usually 0-100
         progressNotifier.value = progress / 100;
         statusNotifier.value = '${progress.toStringAsFixed(1)}%';
       },
       onDownloadError: (errorMessage) {
+        watchdog?.cancel();
         if (isCancelled) return;
         if (mounted && Navigator.canPop(context)) {
           Navigator.pop(context); // Close dialog
@@ -296,6 +335,7 @@ class _DownloadPageState extends State<DownloadPage> {
         }
       },
       onDownloadCompleted: (path) {
+        watchdog?.cancel();
         if (isCancelled) return;
         if (mounted && Navigator.canPop(context)) {
           Navigator.pop(context); // Close dialog
@@ -711,9 +751,7 @@ class _AllAppsViewState extends State<AllAppsView> {
       // Fetch from all repositories
       for (final repo in widget.repos) {
         try {
-          var response = await _dio.get(
-            'https://api.github.com/repos/${repo.userName}/${repo.repoName}/releases/latest',
-          );
+          var response = await _dio.get('');
 
           if (response.statusCode == 200) {
             final List<dynamic> assetsJson = response.data['assets'] ?? [];
@@ -742,15 +780,14 @@ class _AllAppsViewState extends State<AllAppsView> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          if (_allAssets.isEmpty) {
+            _errorMessage =
+                'No assets found. Please check your internet or repository list.';
+          }
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Error loading apps: $e';
-        });
-      }
+      Sentry.captureException(e);
     }
   }
 
@@ -932,6 +969,27 @@ class _AllAppsViewState extends State<AllAppsView> {
     // C. Define Download Logic
     // FileDownloader.downloadFile returns the downloaded File object or null if failed.
     // It downloads to the public Downloads directory by default.
+    // D. Watchdog Timer
+    // If no progress for 60 seconds, cancel the download.
+    Timer? watchdog;
+    void resetWatchdog() {
+      watchdog?.cancel();
+      watchdog = Timer(const Duration(seconds: 60), () {
+        if (!isCancelled) {
+          isCancelled = true;
+          if (downloadId != null) {
+            FileDownloader.cancelDownload(downloadId!);
+          }
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.pop(context); // Close dialog
+            _snack('Download timed out due to inactivity.');
+          }
+        }
+      });
+    }
+
+    resetWatchdog(); // Initial start
+
     FileDownloader.downloadFile(
       url: asset.downloadUrl,
       name: asset.name,
@@ -941,11 +999,13 @@ class _AllAppsViewState extends State<AllAppsView> {
       notificationType: NotificationType.all,
       onProgress: (name, progress) {
         if (isCancelled) return;
+        resetWatchdog();
         // progress is usually 0-100
         progressNotifier.value = progress / 100;
         statusNotifier.value = '${progress.toStringAsFixed(1)}%';
       },
       onDownloadError: (errorMessage) {
+        watchdog?.cancel();
         if (isCancelled) return;
         if (mounted && Navigator.canPop(context)) {
           Navigator.pop(context); // Close dialog
@@ -953,6 +1013,7 @@ class _AllAppsViewState extends State<AllAppsView> {
         }
       },
       onDownloadCompleted: (path) {
+        watchdog?.cancel();
         if (isCancelled) return;
         if (mounted && Navigator.canPop(context)) {
           Navigator.pop(context); // Close dialog
