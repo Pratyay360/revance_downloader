@@ -2,43 +2,16 @@ name: GitHub Cleanup
 
 on:
   workflow_dispatch:
-
-permissions:
-  actions: write
-  contents: write
+ 
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-
+    permissions:
+      actions: write # Required for deleting workflow runs
     steps:
-      - name: Install GitHub CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gh
-
-      - name: Authenticate GH CLI
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
-      - name: Delete all workflow runs except latest
-        run: |
-          set -euo pipefail
-
-          for wf in $(gh api repos/${{ github.repository }}/actions/workflows --jq '.workflows[].id'); do
-            runs=$(gh api repos/${{ github.repository }}/actions/workflows/$wf/runs --jq '.workflow_runs | sort_by(.created_at) | .[:-1] | .[].id')
-            for run in $runs; do
-              echo "Deleting workflow run $run"
-              gh api repos/${{ github.repository }}/actions/runs/$run -X DELETE
-            done
-          done
-
-      - name: Delete all releases and tags
-        run: |
-          set -euo pipefail
-
-          for rel in $(gh release list --limit 1000 --json tagName --jq '.[].tagName'); do
-            echo "Deleting release $rel"
-            gh release delete "$rel" -y
-            git push origin --delete "$rel" || true
-          done
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          keep_minimum_runs: 5
