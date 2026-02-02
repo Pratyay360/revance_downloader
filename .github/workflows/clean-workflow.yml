@@ -2,6 +2,11 @@ name: GitHub Cleanup
 
 on:
   workflow_dispatch:
+    inputs:
+      keep_latest:
+        description: 'Number of latest releases to keep'
+        required: true
+        default: '2'
 
 permissions:
   actions: write
@@ -11,13 +16,13 @@ jobs:
   cleanup-releases:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
       - name: Delete older releases
-        uses: s00d/delete-older-releases@0.2.1
+        uses: actions/delete-release@v1
         with:
-          keep_latest: 2
-          repo: Pratyay360/revance_downloader
-          delete_tags: 1
-          delete_branch: 0
-
-      - name: GitHub Cleaner
-        uses: nckslvrmn/github_cleaner@v1.0.0
+          keep_latest: ${{ github.event.inputs.keep_latest }}
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
