@@ -8,13 +8,16 @@ permissions:
   contents: write
 
 jobs:
-  cleanup:
+  cleanup-releases:
     runs-on: ubuntu-latest
-    permissions:
-      actions: write # Required for deleting workflow runs
     steps:
-      - name: Delete old workflow runs
-        uses: Mattraks/delete-workflow-runs@v2
+      - name: Delete older releases
+        uses: s00d/delete-older-releases@0.2.1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          keep_minimum_runs: 5
+          keep_latest: 2
+          repo: Pratyay360/revance_downloader
+          delete_tags: 1
+          delete_branch: 0
+
+      - name: GitHub Cleaner
+        uses: nckslvrmn/github_cleaner@v1.0.0
