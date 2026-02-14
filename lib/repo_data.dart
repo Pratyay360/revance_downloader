@@ -1,10 +1,10 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show CustomSemanticsAction;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'secrets.dart' as secrets;
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Lightweight value object representing a repository.
 class RepoData {
@@ -89,13 +89,12 @@ class RepoStorage {
             result.add(RepoData.fromJson(Map<String, dynamic>.from(decoded)));
           }
         } catch (e) {
+          log('Malformed entry: $e');
           // keep running on malformed entries
-          Sentry.captureException(e);
         }
       }
     }
 
-    // ensure the secret/default repos are always first and read-only
     final List<RepoData> defaultRepos = [
       RepoData(
         userName: secrets.userName1,

@@ -1,5 +1,5 @@
+import 'dart:developer';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 class NotificationsService {
   static final FlutterLocalNotificationsPlugin _plugin =
@@ -20,7 +20,7 @@ class NotificationsService {
       await _plugin.initialize(settings: initSettings);
       _initialized = true;
     } catch (e) {
-      Sentry.captureException(e);
+      log('Error initializing notifications: $e');
     }
   }
 
@@ -33,9 +33,7 @@ class NotificationsService {
 
     // Skip notification if initialization failed
     if (!_initialized) {
-      Sentry.captureMessage(
-        'Notifications not initialized, skipping notification',
-      );
+      log('Notifications not initialized, skipping notification');
       return;
     }
 
@@ -65,9 +63,7 @@ class NotificationsService {
 
     // Skip registration if initialization failed
     if (!_initialized) {
-      Sentry.captureMessage(
-        'Notifications not initialized, skipping registration',
-      );
+      log('Notifications not initialized, skipping registration');
       return;
     }
   }

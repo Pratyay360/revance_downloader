@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:io';
 import 'package:app_installer/app_installer.dart';
 import 'package:dio/dio.dart';
@@ -7,12 +8,13 @@ import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/repo_data.dart';
 import 'package:rd_manager/notifications.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:rd_manager/app_meta.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class GithubAsset {
   final int id;
+  String? imageLink;
   final String name;
   final String downloadUrl;
   final int size;
@@ -21,6 +23,7 @@ class GithubAsset {
   GithubAsset({
     required this.id,
     required this.name,
+    this.imageLink,
     required this.downloadUrl,
     required this.size,
     required this.digest,
@@ -28,11 +31,12 @@ class GithubAsset {
 
   factory GithubAsset.fromJson(Map<String, dynamic> json) {
     return GithubAsset(
-      id: json['id']!,
-      name: json['name']!,
-      downloadUrl: json['browser_download_url']!,
-      size: json['size']!,
-      digest: json['digest']!,
+      id: json['id'],
+      name: json['name'],
+      imageLink: json['image_link'],
+      downloadUrl: json['browser_download_url'],
+      size: json['size'],
+      digest: json['digest'] ?? '',
     );
   }
 }
@@ -89,19 +93,23 @@ class _DownloadPageState extends State<DownloadPage> {
       final List<dynamic> assetsJson = response.data['assets'] ?? [];
       if (mounted) {
         setState(() {
-          _assets = assetsJson
-              .map((e) => GithubAsset.fromJson(e))
-              .where(
-                (asset) =>
-                    asset.name.toLowerCase().endsWith('.apk') ||
-                    asset.name.toLowerCase().endsWith('.aab'),
-              )
-              .toList();
+          _assets = assetsJson.map((e) => GithubAsset.fromJson(e)).where((
+            asset,
+          ) {
+            final name = asset.name.toLowerCase();
+            return (name.endsWith('.apk') || name.endsWith('.aab')) &&
+                (name.contains('arm64') ||
+                    name.contains('universal') ||
+                    name.contains('v8a'));
+          }).toList();
           _isLoading = false;
         });
+
+        // Proactively fetch metadata/icons for assets
+        _fetchMetadataForAssets();
       }
     } on DioException catch (e) {
-      Sentry.captureException(e);
+      log(e.toString());
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -115,12 +123,34 @@ class _DownloadPageState extends State<DownloadPage> {
         });
       }
     } catch (e) {
-      Sentry.captureException(e);
+      log(e.toString());
       if (mounted) {
         setState(() {
           _isLoading = false;
           _errorMessage = 'An unexpected error occurred.';
         });
+      }
+    }
+  }
+
+  Future<void> _fetchMetadataForAssets() async {
+    for (var asset in _assets) {
+      if (asset.imageLink != null) continue;
+
+      // Simple heuristic: try to extract package name from asset name
+      final parts = asset.name.split('_');
+      for (var part in parts) {
+        if (part.contains('.') && part.split('.').length >= 3) {
+          // Likely a package name like com.example.app
+          final pkg = part.replaceAll('.apk', '').replaceAll('.aab', '');
+          final meta = await fetchAppMeta(pkg);
+          if (meta != null && mounted) {
+            setState(() {
+              asset.imageLink = meta.icon;
+            });
+            break;
+          }
+        }
       }
     }
   }
@@ -482,7 +512,7 @@ class _DownloadPageState extends State<DownloadPage> {
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       await db.close();
     } catch (e) {
-      Sentry.captureMessage('DB Error: $e');
+      print(e);
     }
 
     await _installApk(savePath);
@@ -669,11 +699,28 @@ class _DownloadPageState extends State<DownloadPage> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: ListTile(
-                        leading: Icon(
-                          Icons.extension,
-                          size: 32,
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
+                        leading: asset.imageLink != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  asset.imageLink!,
+                                  width: 32,
+                                  height: 32,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, _, _) => Icon(
+                                    Icons.extension,
+                                    size: 32,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.secondary,
+                                  ),
+                                ),
+                              )
+                            : Icon(
+                                Icons.extension,
+                                size: 32,
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
                         title: Text(
                           asset.name,
                           style: Theme.of(context).textTheme.titleSmall
@@ -704,9 +751,6 @@ class _DownloadPageState extends State<DownloadPage> {
   }
 }
 
-// ---------------------------------------------------------
-// 3. All Apps View Widget
-// ---------------------------------------------------------
 class AllAppsView extends StatefulWidget {
   final List<RepoData> repos;
   final Function(int) onRepoChanged;
@@ -768,10 +812,7 @@ class _AllAppsViewState extends State<AllAppsView> {
             }
           }
         } catch (e) {
-          // Continue with other repos even if one fails
-          Sentry.captureMessage(
-            'Error fetching from ${repo.userName}/${repo.repoName}: $e',
-          );
+          log('Error fetching from ${repo.userName}/${repo.repoName}: $e');
         }
       }
 
@@ -783,9 +824,39 @@ class _AllAppsViewState extends State<AllAppsView> {
                 'No assets found. Please check your internet or repository list.';
           }
         });
+
+        // Fetch metadata for All Apps
+        _fetchMetadataForAllAssets();
       }
     } catch (e) {
-      Sentry.captureException(e);
+      log(e.toString());
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'An unexpected error occurred.';
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchMetadataForAllAssets() async {
+    for (var item in _allAssets) {
+      final GithubAsset asset = item['asset'] as GithubAsset;
+      if (asset.imageLink != null) continue;
+
+      final parts = asset.name.split('_');
+      for (var part in parts) {
+        if (part.contains('.') && part.split('.').length >= 3) {
+          final pkg = part.replaceAll('.apk', '').replaceAll('.aab', '');
+          final meta = await fetchAppMeta(pkg);
+          if (meta != null && mounted) {
+            setState(() {
+              asset.imageLink = meta.icon;
+            });
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -1157,7 +1228,7 @@ class _AllAppsViewState extends State<AllAppsView> {
         'path': savePath,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
-      Sentry.captureMessage('DB Error: $e');
+      print('DB Error: $e');
     }
 
     await _installApk(savePath);
@@ -1328,11 +1399,30 @@ class _AllAppsViewState extends State<AllAppsView> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: ListTile(
-                          leading: Icon(
-                            Icons.extension,
-                            size: 32,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
+                          leading: asset.imageLink != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    asset.imageLink!,
+                                    width: 32,
+                                    height: 32,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, _, _) => Icon(
+                                      Icons.extension,
+                                      size: 32,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondary,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.extension,
+                                  size: 32,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondary,
+                                ),
                           title: Text(
                             asset.name,
                             style: Theme.of(context).textTheme.titleSmall

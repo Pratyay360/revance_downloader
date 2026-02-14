@@ -4,8 +4,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:rd_manager/download_page.dart';
 import 'package:rd_manager/intro.dart';
 import 'package:rd_manager/repo_data.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:sentry_logging/sentry_logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rd_manager/websocket.dart';
 import 'package:rd_manager/notifications.dart';
@@ -16,14 +14,7 @@ Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   globalArgs = args;
 
-  await SentryFlutter.init((options) {
-    options.dsn = sentryDsn;
-    options.addIntegration(LoggingIntegration());
-    options.sendDefaultPii = true;
-    options.tracesSampleRate = 1.0;
-    options.enableLogs = true;
-    options.debug = false;
-  }, appRunner: initApp);
+  initApp();
 }
 
 List<String> globalArgs = <String>[];
@@ -122,7 +113,6 @@ class _MyAppState extends State<MyApp> {
           darkTheme: _buildTheme(darkScheme),
           themeMode: ThemeMode.system,
           home: const MyHomePage(title: 'main page :)'),
-          navigatorObservers: [SentryNavigatorObserver()],
         );
       },
     );

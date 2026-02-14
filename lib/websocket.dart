@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:rd_manager/notifications.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'secrets.dart';
 
@@ -28,19 +28,19 @@ class WebSocketService {
                 );
               }
             } catch (e) {
-              Sentry.captureException('Failed to parse WebSocket message: $e');
+              log('Failed to parse WebSocket message: $e');
             }
           }
         },
         onError: (error) {
-          Sentry.captureException('WebSocket Error: $error');
+          log('WebSocket Error: $error');
         },
         onDone: () {
-          Sentry.captureMessage('WebSocket Connection Closed');
+          log('WebSocket Connection Closed');
         },
       );
     } catch (e) {
-      Sentry.captureException(e);
+      log('WebSocket Initialization Error: $e');
     }
   }
 
