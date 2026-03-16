@@ -44,6 +44,9 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=${{ github.workspace }}/android/keystore.jks" >> android/key.properties
           echo "${{ secrets.ENVS }}" | base64 -d > lib/secrets.dart
+      - name: Microg
+        run: |
+            gh release download --repo MorpheApp/MicroG-RE --pattern "*.apk" --dir build/app/*/*/*
 
       - name: Build APK
         run: flutter build apk --release --target-platform  android-arm64 --build-name "RDmanager v1.0.${{ github.run_number }}"
