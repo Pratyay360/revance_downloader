@@ -895,29 +895,48 @@ class _AllAppsViewState extends State<AllAppsView> {
   Future<void> _processDownload(GithubAsset asset) async {
     if (!mounted) return;
 
-    final downloadFuture = _downloadCoordinator.startDownload(
-      DownloadRequest(
-        name: asset.name,
-        url: asset.downloadUrl,
-        digest: asset.digest,
-      ),
-      onCompleted: () {
-        if (!mounted) return;
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        _snack('Installation started');
-      },
-      onError: (message) {
-        if (!mounted) return;
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        _snack(message);
-      },
-    );
-    await _showDownloadDialog(asset);
+    // Show the dialog first so that any synchronous failure in startDownload
+    // can still be reflected in the UI and the dialog can be properly closed.
+    final dialogFuture = _showDownloadDialog(asset);
+
+    Future<void> downloadFuture;
+    try {
+      downloadFuture = _downloadCoordinator.startDownload(
+        DownloadRequest(
+          name: asset.name,
+          url: asset.downloadUrl,
+          digest: asset.digest,
+        ),
+        onCompleted: () {
+          if (!mounted) return;
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          _snack('Installation started');
+        },
+        onError: (message) {
+          if (!mounted) return;
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          _snack(message);
+        },
+      );
+    } catch (e, st) {
+      // Handle any synchronous error from startDownload by closing the dialog
+      // (if it is shown) and notifying the user.
+      log('Failed to start download: $e', stackTrace: st);
+      if (!mounted) return;
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      _snack('Failed to start download');
+      return;
+    }
+
     await downloadFuture;
+    // Ensure the dialog has completed (i.e. been popped) before finishing.
+    await dialogFuture;
   }
 
   Future<void> _showDownloadDialog(GithubAsset asset) {
