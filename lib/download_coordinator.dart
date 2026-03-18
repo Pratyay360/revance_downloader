@@ -212,8 +212,8 @@ class DownloadCoordinator {
       throw Exception('Downloaded file does not exist.');
     }
 
-    final bytes = await file.readAsBytes();
-    final computed = sha256.convert(bytes).toString();
+    final hash = await sha256.bind(file.openRead()).first;
+    final computed = hash.toString();
     if (computed != normalized) {
       throw Exception('Digest mismatch detected.');
     }
