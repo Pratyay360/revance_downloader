@@ -135,9 +135,13 @@ class DownloadCoordinator {
         }
 
         try {
+          var failureContext = 'processing downloaded file';
+
+          failureContext = 'verifying download';
           statusNotifier.value = 'Verifying download...';
           await _verifyDigest(path: path, digest: request.digest);
 
+          failureContext = 'saving download metadata';
           statusNotifier.value = 'Saving download metadata...';
           await DownloadHistoryStore.instance.insert(
             name: request.name,
@@ -145,6 +149,7 @@ class DownloadCoordinator {
             path: path,
           );
 
+          failureContext = 'launching installer';
           statusNotifier.value = 'Launching installer...';
           await AppInstaller.installApk(path);
           await NotificationsService.showNotification(
@@ -157,7 +162,7 @@ class DownloadCoordinator {
           onCompleted?.call();
         } catch (e) {
           _finish();
-          onError?.call('Install failed: $e');
+          onError?.call('Download processing failed while $failureContext: $e');
         }
       },
     );
