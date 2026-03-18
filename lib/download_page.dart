@@ -199,10 +199,10 @@ class _DownloadPageState extends State<DownloadPage> {
                       },
                     ),
 
-                    // Option 2: Save & Install (Cache -> Save Public -> Open)
+                    // Option 2: Same as Option 1 (Download & Install)
                     _actionButton(
                       icon: Icons.save_alt,
-                      label: 'Download & Save',
+                      label: 'Download & Install (same as above)',
                       color: Theme.of(context).colorScheme.secondary,
                       onTap: () {
                         Navigator.pop(context);
