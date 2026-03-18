@@ -35,7 +35,7 @@ class DownloadHistoryStore {
       version: 1,
       onCreate: (db, version) {
         return db.execute(
-          'CREATE TABLE downloads(id INTEGER PRIMARY KEY, name TEXT, digest TEXT, path TEXT)',
+          'CREATE TABLE downloads(name TEXT PRIMARY KEY, digest TEXT, path TEXT)',
         );
       },
     );
