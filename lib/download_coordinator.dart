@@ -86,6 +86,7 @@ class DownloadCoordinator {
       return Future.error(
         StateError('A download is already in progress.'),
       );
+      );
     }
 
     if (Platform.isAndroid) {
