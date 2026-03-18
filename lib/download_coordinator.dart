@@ -214,7 +214,15 @@ class DownloadCoordinator {
     required String digest,
   }) async {
     final normalized = _normalizeDigest(digest);
-    if (normalized == null) return;
+    if (normalized == null) {
+      // If a digest was provided but is not in a recognized format,
+      // treat this as an error instead of silently skipping verification.
+      if (digest.trim().isNotEmpty) {
+        throw Exception('Invalid digest format.');
+      }
+      // No digest provided (empty/whitespace) – skip verification.
+      return;
+    }
 
     final file = File(path);
     if (!await file.exists()) {
