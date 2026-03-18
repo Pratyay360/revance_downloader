@@ -1,15 +1,9 @@
-import 'dart:async';
 import 'dart:developer';
-import 'dart:io';
-import 'package:app_installer/app_installer.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_file_downloader/flutter_file_downloader.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:rd_manager/download_coordinator.dart';
 import 'package:rd_manager/repo_data.dart';
-import 'package:rd_manager/notifications.dart';
 import 'package:rd_manager/app_meta.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class GithubAsset {
@@ -64,6 +58,7 @@ class _DownloadPageState extends State<DownloadPage> {
   bool _isLoading = true;
   List<GithubAsset> _assets = [];
   String? _errorMessage;
+  final DownloadCoordinator _downloadCoordinator = DownloadCoordinator();
   CancelToken? _cancelToken;
   @override
   void initState() {
@@ -77,6 +72,7 @@ class _DownloadPageState extends State<DownloadPage> {
   @override
   void dispose() {
     _cancelToken?.cancel('Widget disposed');
+    _downloadCoordinator.dispose();
     super.dispose();
   }
 
@@ -199,18 +195,18 @@ class _DownloadPageState extends State<DownloadPage> {
                       color: Theme.of(context).colorScheme.primary,
                       onTap: () {
                         Navigator.pop(context);
-                        _processDownload(asset, saveToPublic: false);
+                        _processDownload(asset);
                       },
                     ),
 
-                    // Option 2: Save & Install (Cache -> Save Public -> Open)
+                    // Option 2: Same as Option 1 (Download & Install)
                     _actionButton(
                       icon: Icons.save_alt,
-                      label: 'Download & Save',
+                      label: 'Download & Install (same as above)',
                       color: Theme.of(context).colorScheme.secondary,
                       onTap: () {
                         Navigator.pop(context);
-                        _processDownload(asset, saveToPublic: true);
+                        _processDownload(asset);
                       },
                     ),
 
@@ -285,103 +281,45 @@ class _DownloadPageState extends State<DownloadPage> {
     );
   }
 
-  // ---------------------------------------------------------
-  // 5. Core Logic: Download -> Cache -> (Save) -> Install
-  // ---------------------------------------------------------
-  Future<Database> _getDatabase() async {
-    return openDatabase(
-      'downloads.db',
-      onCreate: (db, version) {
-        return db.execute(
-          'CREATE TABLE downloads(id INTEGER PRIMARY KEY, name TEXT, digest TEXT, path TEXT)',
-        );
-      },
-      version: 1,
-    );
-  }
 
-  Future<void> _processDownload(
-    GithubAsset asset, {
-    required bool saveToPublic,
-  }) async {
-    // A. Resolve Permissions (Storage is handled in main.dart)
-    if (Platform.isAndroid) {
-      await Permission.notification.request();
-    }
-
+  Future<void> _processDownload(GithubAsset asset) async {
     if (!mounted) return;
 
-    // B. Setup Notifiers
-    // Note: flutter_file_downloader doesn't expose a simple cancel token like Dio in its basic usage.
-    // We will use a flag to handle "cancel" by ignoring the result.
-    final progressNotifier = ValueNotifier<double>(0.0);
-    final statusNotifier = ValueNotifier<String>('Starting...');
-    bool isCancelled = false;
-    int? downloadId;
+    // Show the dialog before starting the download so that any
+    // synchronous error callbacks can safely dismiss it.
+    _showDownloadDialog(asset);
 
-    // C. Define Download Logic
-    // FileDownloader.downloadFile returns the downloaded File object or null if failed.
-    // It downloads to the public Downloads directory by default.
-    // D. Watchdog Timer
-    // If no progress for 60 seconds, cancel the download.
-    Timer? watchdog;
-    void resetWatchdog() {
-      watchdog?.cancel();
-      watchdog = Timer(const Duration(seconds: 60), () {
-        if (!isCancelled) {
-          isCancelled = true;
-          if (downloadId != null) {
-            FileDownloader.cancelDownload(downloadId!);
-          }
-          if (mounted && Navigator.canPop(context)) {
-            Navigator.pop(context); // Close dialog
-            _snack('Download timed out due to inactivity.');
-          }
+    final downloadFuture = _downloadCoordinator.startDownload(
+      DownloadRequest(
+        name: asset.name,
+        url: asset.downloadUrl,
+        digest: asset.digest,
+      ),
+      onCompleted: () {
+        if (!mounted) return;
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
         }
-      });
-    }
-
-    resetWatchdog(); // Initial start
-
-    FileDownloader.downloadFile(
-      url: asset.downloadUrl,
-      name: asset.name,
-      onDownloadRequestIdReceived: (id) {
-        downloadId = id;
+        _snack('Installation started');
       },
-      notificationType: NotificationType.all,
-      onProgress: (name, progress) {
-        if (isCancelled) return;
-        resetWatchdog();
-        // progress is usually 0-100
-        progressNotifier.value = progress / 100;
-        statusNotifier.value = '${progress.toStringAsFixed(1)}%';
-      },
-      onDownloadError: (errorMessage) {
-        watchdog?.cancel();
-        if (isCancelled) return;
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.pop(context); // Close dialog
-          _snack('Download error: $errorMessage');
+      onError: (message) {
+        if (!mounted) return;
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
         }
-      },
-      onDownloadCompleted: (path) {
-        watchdog?.cancel();
-        if (isCancelled) return;
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.pop(context); // Close dialog
-        }
-        _handleDownloadSuccess(asset, path);
+        _snack(message);
       },
     );
+    await downloadFuture;
+  }
 
-    // D. Show Dialog
-    await showDialog(
+  Future<void> _showDownloadDialog(GithubAsset asset) {
+    return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return PopScope(
-          canPop: false, // Prevent back button
+          canPop: false,
           child: Dialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(28),
@@ -392,7 +330,6 @@ class _DownloadPageState extends State<DownloadPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icon
                   Container(
                     width: 64,
                     height: 64,
@@ -407,7 +344,6 @@ class _DownloadPageState extends State<DownloadPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Title
                   Text(
                     'Downloading',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -425,9 +361,8 @@ class _DownloadPageState extends State<DownloadPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 32),
-                  // Progress Bar
                   ValueListenableBuilder<double>(
-                    valueListenable: progressNotifier,
+                    valueListenable: _downloadCoordinator.progressNotifier,
                     builder: (context, value, _) {
                       return Column(
                         children: [
@@ -443,7 +378,6 @@ class _DownloadPageState extends State<DownloadPage> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Percentage
                           Text(
                             '${(value * 100).toStringAsFixed(0)}%',
                             style: Theme.of(context).textTheme.labelLarge
@@ -454,12 +388,9 @@ class _DownloadPageState extends State<DownloadPage> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  // Status Text
                   ValueListenableBuilder<String>(
-                    valueListenable: statusNotifier,
+                    valueListenable: _downloadCoordinator.statusNotifier,
                     builder: (context, value, _) {
-                      // We only show the text if it's not the simple percentage
-                      // (since we show that above centrally now)
                       if (value.endsWith('%')) return const SizedBox.shrink();
                       return Text(
                         value,
@@ -471,13 +402,9 @@ class _DownloadPageState extends State<DownloadPage> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  // Cancel Button
                   TextButton.icon(
                     onPressed: () {
-                      isCancelled = true;
-                      if (downloadId != null) {
-                        FileDownloader.cancelDownload(downloadId!);
-                      }
+                      _downloadCoordinator.cancelDownload();
                       Navigator.pop(context);
                       _snack('Download cancelled');
                     },
@@ -494,45 +421,6 @@ class _DownloadPageState extends State<DownloadPage> {
         );
       },
     );
-  }
-
-  Future<void> _handleDownloadSuccess(
-    GithubAsset asset,
-    String savePath,
-  ) async {
-    if (!mounted) return;
-    _snack('Download completed.');
-
-    try {
-      final db = await _getDatabase();
-      await db.insert('downloads', {
-        'digest': asset.digest,
-        'name': asset.name,
-        'path': savePath,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-      await db.close();
-    } catch (e) {
-      print(e);
-    }
-
-    await _installApk(savePath);
-  }
-
-  Future<void> _installApk(String filePath) async {
-    try {
-      await AppInstaller.installApk(filePath);
-      if (!mounted) return;
-
-      _snack('Installation started');
-      await NotificationsService.showNotification(
-        id: 2,
-        title: 'Installation',
-        body: 'Installer opened successfully',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _snack('Install failed: $e');
-    }
   }
 
   void _snack(String msg) {
@@ -770,6 +658,7 @@ class _AllAppsViewState extends State<AllAppsView> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _allAssets = []; // Store assets with repo info
   String? _errorMessage;
+  final DownloadCoordinator _downloadCoordinator = DownloadCoordinator();
 
   @override
   void initState() {
@@ -777,6 +666,12 @@ class _AllAppsViewState extends State<AllAppsView> {
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
     _fetchAllReleases();
+  }
+
+  @override
+  void dispose() {
+    _downloadCoordinator.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchAllReleases() async {
@@ -897,33 +792,18 @@ class _AllAppsViewState extends State<AllAppsView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // Option 1: Install Only (Cache -> Open)
+                    // Option 1: Download & Install (Cache -> Open)
                     _actionButton(
                       icon: Icons.system_update,
                       label: 'Download & Install',
                       color: Theme.of(context).colorScheme.primary,
                       onTap: () {
                         Navigator.pop(context);
-                        _processDownload(
-                          asset,
-                          saveToPublic: false,
-                          repo: repo,
-                        );
+                        _processDownload(asset);
                       },
                     ),
 
-                    // Option 2: Save & Install (Cache -> Save Public -> Open)
-                    _actionButton(
-                      icon: Icons.save_alt,
-                      label: 'Download & Save',
-                      color: Theme.of(context).colorScheme.secondary,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _processDownload(asset, saveToPublic: true, repo: repo);
-                      },
-                    ),
-
-                    // Option 3: Open in Browser
+                    // Option 2: Open in Browser
                     _actionButton(
                       icon: Icons.open_in_browser,
                       label: 'Open in Browser',
@@ -1000,104 +880,61 @@ class _AllAppsViewState extends State<AllAppsView> {
     }
   }
 
-  // ---------------------------------------------------------
-  // Core Logic: Download -> Cache -> (Save) -> Install
-  // ---------------------------------------------------------
-  Future<Database> _getDatabase() async {
-    return openDatabase(
-      'downloads.db',
-      onCreate: (db, version) {
-        return db.execute(
-          'CREATE TABLE downloads(id INTEGER PRIMARY KEY, name TEXT, digest TEXT, path TEXT)',
-        );
-      },
-      version: 1,
-    );
-  }
 
-  Future<void> _processDownload(
-    GithubAsset asset, {
-    required bool saveToPublic,
-    required RepoData repo,
-  }) async {
-    // A. Resolve Permissions (Storage is handled in main.dart)
-    if (Platform.isAndroid) {
-      await Permission.notification.request();
-    }
-
+  Future<void> _processDownload(GithubAsset asset) async {
     if (!mounted) return;
 
-    // B. Setup Notifiers
-    // Note: flutter_file_downloader doesn't expose a simple cancel token like Dio in its basic usage.
-    // We will use a flag to handle "cancel" by ignoring the result.
-    final progressNotifier = ValueNotifier<double>(0.0);
-    final statusNotifier = ValueNotifier<String>('Starting...');
-    bool isCancelled = false;
-    int? downloadId;
+    // Show the dialog first so that any synchronous failure in startDownload
+    // can still be reflected in the UI and the dialog can be properly closed.
+    final dialogFuture = _showDownloadDialog(asset);
 
-    // C. Define Download Logic
-    // FileDownloader.downloadFile returns the downloaded File object or null if failed.
-    // It downloads to the public Downloads directory by default.
-    // D. Watchdog Timer
-    // If no progress for 60 seconds, cancel the download.
-    Timer? watchdog;
-    void resetWatchdog() {
-      watchdog?.cancel();
-      watchdog = Timer(const Duration(seconds: 60), () {
-        if (!isCancelled) {
-          isCancelled = true;
-          if (downloadId != null) {
-            FileDownloader.cancelDownload(downloadId!);
+    Future<void> downloadFuture;
+    try {
+      downloadFuture = _downloadCoordinator.startDownload(
+        DownloadRequest(
+          name: asset.name,
+          url: asset.downloadUrl,
+          digest: asset.digest,
+        ),
+        onCompleted: () {
+          if (!mounted) return;
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
           }
-          if (mounted && Navigator.canPop(context)) {
-            Navigator.pop(context); // Close dialog
-            _snack('Download timed out due to inactivity.');
+          _snack('Installation started');
+        },
+        onError: (message) {
+          if (!mounted) return;
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
           }
-        }
-      });
+          _snack(message);
+        },
+      );
+    } catch (e, st) {
+      // Handle any synchronous error from startDownload by closing the dialog
+      // (if it is shown) and notifying the user.
+      log('Failed to start download: $e', stackTrace: st);
+      if (!mounted) return;
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      _snack('Failed to start download');
+      return;
     }
 
-    resetWatchdog(); // Initial start
+    await downloadFuture;
+    // Ensure the dialog has completed (i.e. been popped) before finishing.
+    await dialogFuture;
+  }
 
-    FileDownloader.downloadFile(
-      url: asset.downloadUrl,
-      name: asset.name,
-      onDownloadRequestIdReceived: (id) {
-        downloadId = id;
-      },
-      notificationType: NotificationType.all,
-      onProgress: (name, progress) {
-        if (isCancelled) return;
-        resetWatchdog();
-        // progress is usually 0-100
-        progressNotifier.value = progress / 100;
-        statusNotifier.value = '${progress.toStringAsFixed(1)}%';
-      },
-      onDownloadError: (errorMessage) {
-        watchdog?.cancel();
-        if (isCancelled) return;
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.pop(context); // Close dialog
-          _snack('Download error: $errorMessage');
-        }
-      },
-      onDownloadCompleted: (path) {
-        watchdog?.cancel();
-        if (isCancelled) return;
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.pop(context); // Close dialog
-        }
-        _handleDownloadSuccess(asset, path, repo);
-      },
-    );
-
-    // D. Show Dialog
-    await showDialog(
+  Future<void> _showDownloadDialog(GithubAsset asset) {
+    return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return PopScope(
-          canPop: false, // Prevent back button
+          canPop: false,
           child: Dialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(28),
@@ -1108,7 +945,6 @@ class _AllAppsViewState extends State<AllAppsView> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icon
                   Container(
                     width: 64,
                     height: 64,
@@ -1123,7 +959,6 @@ class _AllAppsViewState extends State<AllAppsView> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Title
                   Text(
                     'Downloading',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -1141,9 +976,8 @@ class _AllAppsViewState extends State<AllAppsView> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 32),
-                  // Progress Bar
                   ValueListenableBuilder<double>(
-                    valueListenable: progressNotifier,
+                    valueListenable: _downloadCoordinator.progressNotifier,
                     builder: (context, value, _) {
                       return Column(
                         children: [
@@ -1159,7 +993,6 @@ class _AllAppsViewState extends State<AllAppsView> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Percentage
                           Text(
                             '${(value * 100).toStringAsFixed(0)}%',
                             style: Theme.of(context).textTheme.labelLarge
@@ -1170,12 +1003,9 @@ class _AllAppsViewState extends State<AllAppsView> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  // Status Text
                   ValueListenableBuilder<String>(
-                    valueListenable: statusNotifier,
+                    valueListenable: _downloadCoordinator.statusNotifier,
                     builder: (context, value, _) {
-                      // We only show the text if it's not the simple percentage
-                      // (since we show that above centrally now)
                       if (value.endsWith('%')) return const SizedBox.shrink();
                       return Text(
                         value,
@@ -1187,13 +1017,9 @@ class _AllAppsViewState extends State<AllAppsView> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  // Cancel Button
                   TextButton.icon(
                     onPressed: () {
-                      isCancelled = true;
-                      if (downloadId != null) {
-                        FileDownloader.cancelDownload(downloadId!);
-                      }
+                      _downloadCoordinator.cancelDownload();
                       Navigator.pop(context);
                       _snack('Download cancelled');
                     },
@@ -1210,45 +1036,6 @@ class _AllAppsViewState extends State<AllAppsView> {
         );
       },
     );
-  }
-
-  Future<void> _handleDownloadSuccess(
-    GithubAsset asset,
-    String savePath,
-    RepoData repo,
-  ) async {
-    if (!mounted) return;
-    _snack('Download completed.');
-
-    try {
-      final db = await _getDatabase();
-      await db.insert('downloads', {
-        'digest': asset.digest,
-        'name': asset.name,
-        'path': savePath,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    } catch (e) {
-      print('DB Error: $e');
-    }
-
-    await _installApk(savePath);
-  }
-
-  Future<void> _installApk(String filePath) async {
-    try {
-      await AppInstaller.installApk(filePath);
-      if (!mounted) return;
-
-      _snack('Installation started');
-      await NotificationsService.showNotification(
-        id: 2,
-        title: 'Installation',
-        body: 'Installer opened successfully',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _snack('Install failed: $e');
-    }
   }
 
   @override
