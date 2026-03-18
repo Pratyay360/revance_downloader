@@ -83,8 +83,9 @@ class DownloadCoordinator {
     VoidCallback? onCancelled,
   }) async {
     if (_isRunning) {
-      onError?.call('A download is already in progress.');
-      return;
+      return Future.error(
+        StateError('A download is already in progress.'),
+      );
     }
 
     if (Platform.isAndroid) {
