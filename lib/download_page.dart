@@ -285,6 +285,10 @@ class _DownloadPageState extends State<DownloadPage> {
   Future<void> _processDownload(GithubAsset asset) async {
     if (!mounted) return;
 
+    // Show the dialog before starting the download so that any
+    // synchronous error callbacks can safely dismiss it.
+    _showDownloadDialog(asset);
+
     final downloadFuture = _downloadCoordinator.startDownload(
       DownloadRequest(
         name: asset.name,
@@ -306,7 +310,6 @@ class _DownloadPageState extends State<DownloadPage> {
         _snack(message);
       },
     );
-    await _showDownloadDialog(asset);
     await downloadFuture;
   }
 
