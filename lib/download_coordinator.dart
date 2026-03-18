@@ -178,6 +178,8 @@ class DownloadCoordinator {
   }
 
   void dispose() {
+    // Ensure any in-flight download is cancelled before disposing notifiers.
+    cancelDownload();
     _watchdog?.cancel();
     progressNotifier.dispose();
     statusNotifier.dispose();
