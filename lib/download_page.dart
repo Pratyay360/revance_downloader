@@ -792,7 +792,7 @@ class _AllAppsViewState extends State<AllAppsView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // Option 1: Install Only (Cache -> Open)
+                    // Option 1: Download & Install (Cache -> Open)
                     _actionButton(
                       icon: Icons.system_update,
                       label: 'Download & Install',
@@ -803,18 +803,7 @@ class _AllAppsViewState extends State<AllAppsView> {
                       },
                     ),
 
-                    // Option 2: Save & Install (Cache -> Save Public -> Open)
-                    _actionButton(
-                      icon: Icons.save_alt,
-                      label: 'Download & Save',
-                      color: Theme.of(context).colorScheme.secondary,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _processDownload(asset);
-                      },
-                    ),
-
-                    // Option 3: Open in Browser
+                    // Option 2: Open in Browser
                     _actionButton(
                       icon: Icons.open_in_browser,
                       label: 'Open in Browser',
