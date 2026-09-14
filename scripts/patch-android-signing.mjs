@@ -10,17 +10,27 @@
  * Reads:
  *   android/keystore.properties
  * Writes:
- *   android/app/build.gradle (appends / removes a // release-signing-patch block)
+ *   android/app/build.gradle  OR  android/app/build.gradle.kts (auto-detected)
+ *   - appends / removes a // release-signing-patch block
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
-const GRADLE_FILE = join(ROOT, "android", "app", "build.gradle");
+const CANDIDATES = [
+  join(ROOT, "android", "app", "build.gradle"),
+  join(ROOT, "android", "app", "build.gradle.kts"),
+];
+
+function findGradleFile() {
+  for (const p of CANDIDATES) if (existsSync(p)) return p;
+  return null;
+}
+
 const MARKER = "// >>> rd-manager:release-signing-patch";
 const CLOSER = "// <<< rd-manager:release-signing-patch";
 
-const PATCH = `${MARKER}
+const PATCH_GRADLE = `${MARKER}
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
@@ -48,41 +58,74 @@ android.buildTypes {
 ${CLOSER}
 `;
 
-function undo() {
-	if (!existsSync(GRADLE_FILE)) return;
-	const original = readFileSync(GRADLE_FILE, "utf8");
-	const start = original.indexOf(MARKER);
-	const end = original.indexOf(CLOSER);
-	if (start === -1 || end === -1) {
-		console.log("patch-android-signing: nothing to undo.");
-		return;
-	}
-	const cutEnd = end + CLOSER.length;
-	const next =
-		original.slice(0, start) + original.slice(cutEnd).replace(/^\n+/, "");
-	writeFileSync(GRADLE_FILE, next, "utf8");
-	console.log("patch-android-signing: removed previous patch.");
+const PATCH_KTS = `${MARKER}
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = java.util.Properties()
+if (keystorePropertiesFile.exists()) {
+    java.io.FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
-if (process.argv.includes("--undo")) {
-	undo();
-	process.exit(0);
+android {
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+}
+${CLOSER}
+`;
+
+function undo(file) {
+  if (!existsSync(file)) return false;
+  const original = readFileSync(file, "utf8");
+  const start = original.indexOf(MARKER);
+  const end = original.indexOf(CLOSER);
+  if (start === -1 || end === -1) {
+    console.log(`patch-android-signing: nothing to undo in ${file}.`);
+    return false;
+  }
+  const cutEnd = end + CLOSER.length;
+  const next =
+    original.slice(0, start) + original.slice(cutEnd).replace(/^\n+/, "");
+  writeFileSync(file, next, "utf8");
+  console.log(`patch-android-signing: removed previous patch from ${file}.`);
+  return true;
 }
 
-if (!existsSync(GRADLE_FILE)) {
-	console.error(
-		`patch-android-signing: ${GRADLE_FILE} not found. Run \`npx expo prebuild\` first.`,
-	);
-	process.exit(1);
+const isUndo = process.argv.includes("--undo");
+if (isUndo) {
+  let did = false;
+  for (const c of CANDIDATES) did = undo(c) || did;
+  if (!did) console.log("patch-android-signing: nothing to undo.");
+  process.exit(0);
 }
 
-const original = readFileSync(GRADLE_FILE, "utf8");
+const gradleFile = findGradleFile();
+if (!gradleFile) {
+  console.error(
+    `patch-android-signing: no gradle file found (${CANDIDATES.join(" or ")}). Run \`npx expo prebuild\` first.`,
+  );
+  process.exit(1);
+}
+
+const original = readFileSync(gradleFile, "utf8");
 if (original.includes(MARKER)) {
-	console.log("patch-android-signing: already patched.");
-	process.exit(0);
+  console.log(`patch-android-signing: already patched (${gradleFile}).`);
+  process.exit(0);
 }
 
-writeFileSync(GRADLE_FILE, `${original.trimEnd()}\n\n${PATCH}\n`, "utf8");
-console.log(
-	`patch-android-signing: appended release-signing block to ${GRADLE_FILE}.`,
-);
+const patch = gradleFile.endsWith(".kts") ? PATCH_KTS : PATCH_GRADLE;
+writeFileSync(gradleFile, `${original.trimEnd()}\n\n${patch}\n`, "utf8");
+console.log(`patch-android-signing: appended release-signing block to ${gradleFile}.`);
