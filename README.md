@@ -1,56 +1,137 @@
-# Welcome to your Expo app 👋
+# rd_manager
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A small Expo app that lets you browse and download patched APKs from one or
+more GitHub release repos.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Develop
 
 ```bash
-npm run reset-project
+bun install
+bunx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then open the app on Android (development build, emulator, or Expo Go).
 
-### Other setup steps
+## Design system
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Tokens live in [`src/global.css`](src/global.css) (CSS variables for
+Tailwind / NativeWind) and [`src/constants/theme.ts`](src/constants/theme.ts)
+(raw JS values for native tabs and Reanimated). Reusable screen
+primitives live in `src/components/`:
 
-## Learn more
+- `ScreenHeader` — large-title header for every top-level route.
+- `ListRow` — grouped-list row with leading icon, subtitle, trailing accessory.
+- `EmptyState` — tinted icon well, headline, supporting copy, optional CTA.
+- `AppAssetRow` — asset row with icon, size pill, repo path.
+- `StatPill` — small badge for row-level metadata.
 
-To learn more about developing your project with Expo, look at the following resources:
+Screens import the primitives; nothing else should hand-roll typography,
+spacing, or colors.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Build APKs locally on GitHub Actions
 
-## Join the community
+`.github/workflows/android.yml` runs on every push / PR and on tags:
 
-Join our community of developers creating universal apps.
+| Trigger | Job | Output |
+|---|---|---|
+| push / PR to `main`, manual dispatch | `build-debug` | Unsigned `app-debug.apk` uploaded as artifact `rd-manager-debug` |
+| git tag matching `v*` (e.g. `v1.2.0`) | `build-release` | Signed `app-release.apk` uploaded as artifact `rd-manager-release` **and** attached to the GitHub Release for that tag |
+| **Actions → Run workflow** with `create_release=true` and a `version` | `build-release` | Signed `app-release.apk` uploaded as artifact **and** published to a new GitHub Release tagged `v<version>` |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+iOS is intentionally out of scope — local CI for iOS requires a macOS
+runner plus signing secrets. Add it later if you need it.
+
+### One-time setup for signed release builds
+
+1. Generate a keystore (use Android Studio's `Build → Generate Signed
+   Bundle / APK` wizard, or `keytool`):
+
+   ```bash
+   keytool -genkey -v \
+     -keystore release.keystore \
+     -keyalg RSA -keysize 2048 -validity 10000 \
+     -alias <your-alias>
+   ```
+
+2. Base64-encode the keystore file:
+
+   ```bash
+   base64 -i release.keystore | tr -d '\n' > release.keystore.b64
+   ```
+
+3. Add the following secrets under
+   **Settings → Secrets and variables → Actions**:
+
+   | Secret | Value |
+   |---|---|
+   | `ANDROID_KEYSTORE_BASE64` | contents of `release.keystore.b64` |
+   | `ANDROID_KEYSTORE_PASSWORD` | keystore password |
+   | `ANDROID_KEY_ALIAS` | key alias (e.g. `upload`) |
+   | `ANDROID_KEY_PASSWORD` | key password (often the same as the keystore) |
+
+4. Push a tag:
+
+   ```bash
+   git tag v1.2.0
+   git push origin v1.2.0
+   ```
+
+5. The `build-release` job runs, produces
+   `android/app/build/outputs/apk/release/app-release.apk`, uploads it as
+   an artifact, and attaches it to the GitHub Release for `v1.2.0`.
+
+### Manual release without a tag
+
+If you don't want to push a tag just to publish a build, open
+**Actions → Android APK → Run workflow**, fill in `version` (e.g. `1.2.0`)
+and tick `create_release`. The job publishes a `v1.2.0` GitHub Release
+with the signed APK attached. The local tag is **not** pushed, so it
+won't appear in `git tag`.
+
+### Local debug build
+
+```bash
+bun install
+bunx expo prebuild --platform android --no-install
+cd android && ./gradlew :app:assembleDebug
+# APK at: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+For a local signed release build, drop your keystore at
+`android/app/release.keystore`, create `android/keystore.properties`:
+
+```properties
+storeFile=release.keystore
+storePassword=<store-pass>
+keyAlias=<alias>
+keyPassword=<key-pass>
+```
+
+then run `node scripts/patch-android-signing.mjs` (idempotent) before
+`./gradlew :app:assembleRelease`. Pass `--undo` to revert the patch.
+
+## Project layout
+
+```
+src/
+  app/                expo-router file-based routes
+  components/         reusable UI primitives
+  constants/          JS-side theme tokens (mirrors global.css)
+  hooks/              cross-cutting hooks
+  lib/                data access (prefs, repos, github, secrets)
+  services/           side-effecting services (downloads, notifications, websocket)
+  global.css          Tailwind theme + CSS-variable design tokens
+.github/workflows/    Android CI
+scripts/              gradle signing patch helper, project reset
+```
+
+## Tech
+
+- Expo SDK 57, expo-router, expo-image, expo-file-system
+- NativeWind v5 (Tailwind v4) for styling
+- Gluestack primitives + lucide-react-native icons
+- React Native 0.86, Reanimated 4.5, Worklets 0.10
+
+## License
+
+MIT — see [LICENSE](LICENSE).

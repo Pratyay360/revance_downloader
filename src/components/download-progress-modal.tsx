@@ -1,3 +1,4 @@
+import { Download } from "lucide-react-native";
 import { View } from "react-native";
 
 import { Button, ButtonText } from "@/components/ui/button";
@@ -22,8 +23,9 @@ interface DownloadProgressModalProps {
 }
 
 /**
- * Port of _showDownloadDialog from download_page.dart — non-dismissible modal
- * with live progress bar, percentage, status text and a cancel button.
+ * Non-dismissible modal showing the live download state for the active
+ * asset. Uses a tinted icon well + percentage badge so the user always
+ * sees both the brand color and the current speed/status.
  */
 export function DownloadProgressModal({
 	visible,
@@ -33,6 +35,7 @@ export function DownloadProgressModal({
 }: DownloadProgressModalProps) {
 	const { progress, status } = useDownloadProgress();
 	const isPercent = status.trim().endsWith("%");
+	const percent = Math.round(progress * 100);
 
 	const handleCancel = () => {
 		downloadCoordinator.cancelDownload();
@@ -51,31 +54,45 @@ export function DownloadProgressModal({
 			<ModalBackdrop />
 			<ModalContent>
 				<ModalHeader>
-					<View className="flex-1">
-						<Text className="text-muted-foreground text-sm">Downloading</Text>
-						<Text className="text-xl font-bold" numberOfLines={2}>
-							{assetName}
-						</Text>
+					<View className="flex-row items-center gap-3">
+						<View className="bg-primary-soft h-12 w-12 items-center justify-center rounded-2xl">
+							<Download size={22} className="text-primary" strokeWidth={1.75} />
+						</View>
+						<View className="flex-1">
+							<Text className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+								Downloading
+							</Text>
+							<Text
+								className="text-foreground text-lg font-bold"
+								numberOfLines={2}
+							>
+								{assetName}
+							</Text>
+						</View>
 					</View>
 				</ModalHeader>
 				<ModalBody>
-					<View className="gap-3">
-						<Progress value={Math.round(progress * 100)} className="h-3">
-							<ProgressFilledTrack className="bg-primary" />
+					<View className="gap-4">
+						<Progress value={percent} className="bg-muted h-2.5 rounded-full">
+							<ProgressFilledTrack className="bg-primary rounded-full" />
 						</Progress>
-						<Text className="text-base font-bold">
-							{(progress * 100).toFixed(0)}%
-						</Text>
-						{!isPercent && status.length > 0 && (
-							<Text className="text-muted-foreground text-sm">{status}</Text>
-						)}
+						<View className="flex-row items-center justify-between">
+							<Text className="text-muted-foreground text-sm">
+								{isPercent
+									? status
+									: status.length > 0
+										? status
+										: "Connecting…"}
+							</Text>
+							<Text className="text-foreground text-base font-bold">
+								{percent}%
+							</Text>
+						</View>
 					</View>
 				</ModalBody>
 				<ModalFooter>
-					<Button variant="ghost" action="negative" onPress={handleCancel}>
-						<ButtonText className="text-destructive">
-							Cancel Download
-						</ButtonText>
+					<Button variant="ghost" onPress={handleCancel}>
+						<ButtonText className="text-destructive">Cancel</ButtonText>
 					</Button>
 				</ModalFooter>
 			</ModalContent>

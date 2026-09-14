@@ -1,6 +1,7 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Theme tokens for code that can't consume Tailwind classes — native tabs,
+ * inline `style` props, Reanimated worklets. Keep this in sync with
+ * `src/global.css` (light/dark CSS variables drive the className API).
  */
 
 import "@/global.css";
@@ -9,18 +10,28 @@ import { Platform } from "react-native";
 
 export const Colors = {
 	light: {
-		text: "#000000",
-		background: "#ffffff",
-		backgroundElement: "#F0F0F3",
-		backgroundSelected: "#E0E1E6",
-		textSecondary: "#60646C",
+		text: "#18181b",
+		background: "#fafafc",
+		backgroundElement: "#f4f4f5",
+		backgroundSelected: "#e4e4e7",
+		textSecondary: "#71717a",
+		tint: "#4f46e5",
+		border: "#e4e4e7",
+		card: "#ffffff",
+		destructive: "#dc2626",
+		success: "#16a34a",
 	},
 	dark: {
-		text: "#ffffff",
-		background: "#000000",
-		backgroundElement: "#212225",
-		backgroundSelected: "#2E3135",
-		textSecondary: "#B0B4BA",
+		text: "#fafafa",
+		background: "#09090b",
+		backgroundElement: "#27272a",
+		backgroundSelected: "#3f3f46",
+		textSecondary: "#a1a1aa",
+		tint: "#818cf8",
+		border: "#27272a",
+		card: "#18181b",
+		destructive: "#f87171",
+		success: "#4ade80",
 	},
 } as const;
 
@@ -51,15 +62,47 @@ export const Fonts = Platform.select({
 	},
 });
 
+/**
+ * 4-point spacing scale. Use these in `style` props; for className code
+ * prefer Tailwind's `gap-`/`p-`/`m-` utilities keyed off the same scale.
+ */
 export const Spacing = {
-	half: 2,
-	one: 4,
-	two: 8,
-	three: 16,
-	four: 24,
-	five: 32,
-	six: 64,
+	xxs: 2,
+	xs: 4,
+	sm: 8,
+	md: 12,
+	lg: 16,
+	xl: 20,
+	xxl: 24,
+	"3xl": 32,
+	"4xl": 40,
+	"5xl": 56,
+	"6xl": 72,
+} as const;
+
+/**
+ * Corner radii. Pair every non-full radius with `borderCurve: "continuous"`
+ * (handled inside the reusable components) for iOS-native squircles.
+ */
+export const Radius = {
+	xs: 6,
+	sm: 10,
+	md: 14,
+	lg: 20,
+	xl: 28,
+	full: 9999,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+/**
+ * Animation durations (ms). State feedback → fast; transitions → base;
+ * sheets/large surfaces → slow. Components can multiply by `easing` to
+ * define a complete motion preset.
+ */
+export const Motion = {
+	fast: 150,
+	base: 250,
+	slow: 400,
+} as const;

@@ -1,52 +1,51 @@
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { RepoDownloads } from "@/components/repo-downloads";
-import { loadRepoDataList, RepoData } from "@/lib/repo-data";
+import type { RepoData } from "@/lib/repo-data";
 
-export default function RepoScreen() {
-	const { userName, repoName } = useLocalSearchParams<{
-		userName: string;
-		repoName: string;
-	}>();
+/**
+ * Single-repo detail. Re-uses the same `RepoDownloads` component the All
+ * Apps tab uses, scoped to one repo. The `userName/repoName` URL params
+ * always render a screen, even when the repo isn't in the saved list yet
+ * (e.g. navigated via deep link).
+ */
+export default function RepoDetailScreen() {
+	const params = useLocalSearchParams<{ userName: string; repoName: string }>();
+	const userName = decodeURIComponent(params.userName ?? "");
+	const repoName = decodeURIComponent(params.repoName ?? "");
 
-	const [repos, setRepos] = useState<RepoData[]>([]);
+	const [selected, setSelected] = useState<RepoData | null>(null);
 	const [ready, setReady] = useState(false);
 
+	const load = useCallback(async () => {
+		try {
+			const { loadRepoDataList } = await import("@/lib/repo-data");
+			const list = await loadRepoDataList();
+			const match =
+				list.find((r) => r.userName === userName && r.repoName === repoName) ??
+				new RepoData({ userName, repoName });
+			setSelected(match);
+		} catch {
+			setSelected(new RepoData({ userName, repoName }));
+		} finally {
+			setReady(true);
+		}
+	}, [userName, repoName]);
+
 	useEffect(() => {
-		let disposed = false;
-		(async () => {
-			try {
-				const list = await loadRepoDataList();
-				if (!disposed) setRepos(list);
-			} finally {
-				if (!disposed) setReady(true);
-			}
-		})();
-		return () => {
-			disposed = true;
-		};
-	}, []);
+		load();
+	}, [load]);
 
-	const selected = useMemo(() => {
-		if (!userName || !repoName) return null;
-		return (
-			repos.find(
-				(r) =>
-					r.userName.toLowerCase() === String(userName).toLowerCase() &&
-					r.repoName.toLowerCase() === String(repoName).toLowerCase(),
-			) ??
-			new RepoData({ userName: String(userName), repoName: String(repoName) })
-		);
-	}, [repos, userName, repoName]);
-
-	if (!ready || !selected) return null;
+	if (!ready || !selected) {
+		return <RepoDownloads repos={[]} selected={null} title={repoName} />;
+	}
 
 	return (
 		<RepoDownloads
-			repos={repos}
+			repos={[selected]}
 			selected={selected}
-			title={`${selected.userName}/${selected.repoName}`}
+			title={`${userName}/${repoName}`}
 		/>
 	);
 }

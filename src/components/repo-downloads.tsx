@@ -1,14 +1,13 @@
-import { useRouter } from "expo-router";
-import { Settings } from "lucide-react-native";
+import { Download } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+import { RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppAssetRow } from "@/components/app-asset-row";
 import { AssetActionsheet } from "@/components/asset-actionsheet";
-import { AssetList } from "@/components/asset-list";
 import { DownloadProgressModal } from "@/components/download-progress-modal";
-import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
+import { EmptyState } from "@/components/empty-state";
+import { ScreenHeader } from "@/components/screen-header";
 import {
 	fetchAllReposAssets,
 	fetchLatestReleaseAssets,
@@ -28,8 +27,8 @@ interface RepoDownloadsProps {
 }
 
 /**
- * Port of DownloadPage + AllAppsView from download_page.dart — fetches latest
- * release assets, shows them in a list, and handles download & install flow.
+ * Polished list of installable assets for one or more repos. Shows a
+ * back affordance only when invoked from a single-repo navigation stack.
  */
 export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 	const [assets, setAssets] = useState<(GithubAsset | RepoAsset)[]>([]);
@@ -43,6 +42,25 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 	const [progressVisible, setProgressVisible] = useState(false);
 
 	const isAllApps = !selected;
+
+	const startDownload = useMemo(
+		() =>
+			function start(asset: GithubAsset | RepoAsset) {
+				if (downloadCoordinator.isRunning) return;
+				setProgressVisible(true);
+				downloadCoordinator
+					.startDownload(
+						{ name: asset.name, url: asset.downloadUrl, digest: asset.digest },
+						{
+							onCompleted: () => setProgressVisible(false),
+							onError: () => setProgressVisible(false),
+							onCancelled: () => setProgressVisible(false),
+						},
+					)
+					.catch(() => setProgressVisible(false));
+			},
+		[],
+	);
 
 	const fetchReleases = useCallback(
 		async (isRefresh: boolean) => {
@@ -86,63 +104,58 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 		};
 	}, [fetchReleases]);
 
-	const startDownload = useMemo(
-		() =>
-			function start(asset: GithubAsset | RepoAsset) {
-				if (downloadCoordinator.isRunning) return;
-				setProgressVisible(true);
-				downloadCoordinator
-					.startDownload(
-						{ name: asset.name, url: asset.downloadUrl, digest: asset.digest },
-						{
-							onCompleted: () => {
-								setProgressVisible(false);
-							},
-							onError: () => {
-								setProgressVisible(false);
-							},
-							onCancelled: () => {
-								setProgressVisible(false);
-							},
-						},
-					)
-					.catch(() => setProgressVisible(false));
-			},
-		[],
-	);
-
 	if (loading) {
 		return (
-			<SafeAreaView className="flex-1 bg-background" edges={["left", "right"]}>
-				<Header title={title} />
-				<View className="flex-1 items-center justify-center">
-					<Text className="text-muted-foreground">Loading…</Text>
-				</View>
+			<SafeAreaView className="bg-background flex-1" edges={["left", "right"]}>
+				<ScreenHeader
+					title={title}
+					back={!isAllApps ? "Repos" : undefined}
+					subtitle="Loading latest release…"
+				/>
 			</SafeAreaView>
 		);
 	}
 
 	return (
-		<SafeAreaView className="flex-1 bg-background" edges={["left", "right"]}>
-			<Header title={title} />
+		<SafeAreaView className="bg-background flex-1" edges={["left", "right"]}>
+			<ScreenHeader
+				title={title}
+				back={!isAllApps ? "Repos" : undefined}
+				subtitle={
+					assets.length > 0
+						? `${assets.length} ${assets.length === 1 ? "asset" : "assets"} available`
+						: undefined
+				}
+			/>
 
-			{errorMessage && assets.length === 0 ? (
-				<View className="flex-1 items-center justify-center p-8">
-					<Text className="text-muted-foreground text-center">
-						{errorMessage}
-					</Text>
-				</View>
-			) : (
-				<AssetList
-					assets={assets}
-					onAssetPress={(asset) => {
-						setActionAsset(asset);
-						setSheetOpen(true);
-					}}
-					refreshing={refreshing}
-					onRefresh={() => fetchReleases(true)}
-					emptyMessage={errorMessage ?? "No assets found."}
+			{assets.length === 0 ? (
+				<EmptyState
+					icon={Download}
+					title="No assets found"
+					description={errorMessage ?? "Pull to refresh and try again."}
 				/>
+			) : (
+				<ScrollView
+					className="flex-1"
+					refreshControl={
+						<RefreshControl
+							refreshing={refreshing}
+							onRefresh={() => fetchReleases(true)}
+						/>
+					}
+					contentContainerStyle={{ paddingBottom: 32 }}
+				>
+					{assets.map((asset) => (
+						<AppAssetRow
+							key={asset.id}
+							asset={asset}
+							onPress={() => {
+								setActionAsset(asset);
+								setSheetOpen(true);
+							}}
+						/>
+					))}
+				</ScrollView>
 			)}
 
 			<AssetActionsheet
@@ -166,24 +179,5 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 				onClose={() => setProgressVisible(false)}
 			/>
 		</SafeAreaView>
-	);
-}
-
-function Header({ title }: { title: string }) {
-	const router = useRouter();
-	return (
-		<View className="flex-row items-center justify-between px-4 py-3">
-			<Text className="text-xl font-bold" numberOfLines={1} style={{ flex: 1 }}>
-				{title}
-			</Text>
-			<Button
-				variant="ghost"
-				size="sm"
-				onPress={() => router.push("/repos")}
-				accessibilityLabel="Manage Repositories"
-			>
-				<Settings size={20} className="text-foreground" />
-			</Button>
-		</View>
 	);
 }

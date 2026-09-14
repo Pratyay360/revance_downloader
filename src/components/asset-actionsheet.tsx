@@ -1,6 +1,7 @@
 import * as WebBrowser from "expo-web-browser";
 import { Download, Globe } from "lucide-react-native";
-import { Linking } from "react-native";
+import { Linking, View } from "react-native";
+
 import {
 	Actionsheet,
 	ActionsheetBackdrop,
@@ -23,8 +24,9 @@ interface AssetActionsheetProps {
 }
 
 /**
- * Port of _showActionOptions from download_page.dart — bottom sheet with
- * "Download & Install" and "Open in Browser" actions.
+ * Bottom sheet that confirms what to do with an asset: download & install
+ * or open the URL in a browser. Both actions dismiss the sheet before
+ * starting the action so the user can keep tapping rows without overlap.
  */
 export function AssetActionsheet({
 	isOpen,
@@ -37,12 +39,12 @@ export function AssetActionsheet({
 		try {
 			if (await Linking.canOpenURL(url)) {
 				await Linking.openURL(url);
+				return;
 			}
-		} catch (e) {
+		} catch {
 			// fall back to in-app browser
-			await WebBrowser.openBrowserAsync(url).catch(() => undefined);
-			void e;
 		}
+		await WebBrowser.openBrowserAsync(url).catch(() => undefined);
 	};
 
 	if (!asset) return null;
@@ -58,14 +60,26 @@ export function AssetActionsheet({
 					<ActionsheetDragIndicator />
 				</ActionsheetDragIndicatorWrapper>
 
-				<Text className="px-4 pt-2 text-lg font-semibold" numberOfLines={2}>
-					Action for {asset.name}
-				</Text>
-				<Text className="text-muted-foreground px-4 pb-2 text-sm">
-					{fromRepo
-						? `From: ${fromRepo.userName}/${fromRepo.repoName}`
-						: "Choose how you want to handle this file."}
-				</Text>
+				<View className="px-5 pt-2 pb-3">
+					<Text className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+						Asset
+					</Text>
+					<Text
+						className="text-foreground mt-1 text-lg font-bold"
+						numberOfLines={2}
+					>
+						{asset.name}
+					</Text>
+					{fromRepo ? (
+						<Text className="text-muted-foreground mt-1 text-sm">
+							From {fromRepo.userName}/{fromRepo.repoName}
+						</Text>
+					) : (
+						<Text className="text-muted-foreground mt-1 text-sm">
+							Choose how to handle this file.
+						</Text>
+					)}
+				</View>
 
 				<ActionsheetItem
 					onPress={() => {

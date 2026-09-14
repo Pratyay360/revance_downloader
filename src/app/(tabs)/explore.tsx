@@ -1,12 +1,25 @@
 import { useRouter } from "expo-router";
-import { Code, Settings } from "lucide-react-native";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, View } from "react-native";
+import { Github, Settings } from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
+import { SectionList, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedView } from "@/components/themed-view";
+
+import { EmptyState } from "@/components/empty-state";
+import { ScreenHeader } from "@/components/screen-header";
+import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { loadRepoDataList, type RepoData } from "@/lib/repo-data";
 
+interface RepoSection {
+	title: string;
+	data: RepoData[];
+}
+
+/**
+ * Browse-and-manage screen for saved GitHub repositories. Grouped by
+ * Default / Custom with hairline dividers, so the list reads as one
+ * continuous native surface instead of stacked cards.
+ */
 export default function ReposTabScreen() {
 	const router = useRouter();
 	const [repos, setRepos] = useState<RepoData[]>([]);
@@ -28,92 +41,122 @@ export default function ReposTabScreen() {
 		};
 	}, []);
 
+	const sections = useMemo<RepoSection[]>(() => {
+		const defaults = repos.filter((r) => r.isReadOnly);
+		const customs = repos.filter((r) => !r.isReadOnly);
+		const result: RepoSection[] = [];
+		if (defaults.length > 0) result.push({ title: "Default", data: defaults });
+		if (customs.length > 0) result.push({ title: "Custom", data: customs });
+		return result;
+	}, [repos]);
+
 	if (loading) {
 		return (
-			<ThemedView
-				style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-			>
-				<ActivityIndicator />
-			</ThemedView>
+			<SafeAreaView className="bg-background flex-1" edges={["top"]}>
+				<ScreenHeader title="Repositories" subtitle="Loading…" />
+			</SafeAreaView>
 		);
 	}
 
 	return (
-		<SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-			<View
-				style={{
-					flexDirection: "row",
-					alignItems: "center",
-					justifyContent: "space-between",
-					paddingHorizontal: 16,
-					paddingVertical: 12,
-				}}
-			>
-				<Text style={{ fontSize: 20, fontWeight: "700" }}>Repositories</Text>
-				<Pressable
-					onPress={() => router.push("/repos")}
-					accessibilityLabel="Manage Repositories"
-					style={{ padding: 8 }}
-				>
-					<Settings size={20} />
-				</Pressable>
-			</View>
-
-			<FlatList
-				data={repos}
-				keyExtractor={(r) => `${r.userName}/${r.repoName}/${r.isReadOnly}`}
-				ListEmptyComponent={
-					<View style={{ padding: 32, alignItems: "center", gap: 8 }}>
-						<Text style={{ fontWeight: "600" }}>No repositories</Text>
-						<Text style={{ fontSize: 12, opacity: 0.7 }}>
-							Tap the manage icon to add one.
-						</Text>
-					</View>
-				}
-				renderItem={({ item }) => (
-					<Pressable
-						onPress={() =>
-							router.push(
-								`/repo/${encodeURIComponent(item.userName)}/${encodeURIComponent(item.repoName)}`,
-							)
-						}
-						style={({ pressed }) => ({
-							marginHorizontal: 16,
-							marginVertical: 6,
-							paddingHorizontal: 16,
-							paddingVertical: 14,
-							borderRadius: 12,
-							borderWidth: 1,
-							borderColor: "rgba(0,0,0,0.08)",
-							opacity: pressed ? 0.7 : 1,
-							flexDirection: "row",
-							alignItems: "center",
-							gap: 12,
-						})}
+		<SafeAreaView className="bg-background flex-1" edges={["top"]}>
+			<ScreenHeader
+				title="Repositories"
+				subtitle={`${repos.length} ${repos.length === 1 ? "repo" : "repos"}`}
+				right={
+					<Button
+						variant="ghost"
+						size="sm"
+						onPress={() => router.push("/repos")}
+						accessibilityLabel="Manage repositories"
 					>
-						<View
-							style={{
-								height: 36,
-								width: 36,
-								borderRadius: 18,
-								alignItems: "center",
-								justifyContent: "center",
-								backgroundColor: "rgba(0,0,0,0.06)",
-							}}
-						>
-							<Code size={18} />
-						</View>
-						<View style={{ flex: 1 }}>
-							<Text style={{ fontWeight: "600" }} numberOfLines={1}>
-								{item.repoName}
-							</Text>
-							<Text style={{ fontSize: 12, opacity: 0.7 }} numberOfLines={1}>
-								{item.userName}
-							</Text>
-						</View>
-					</Pressable>
-				)}
+						<Settings size={18} className="text-foreground" />
+					</Button>
+				}
 			/>
+
+			{sections.length === 0 ? (
+				<EmptyState
+					icon={Github}
+					title="No repositories"
+					description="Add a GitHub repo to start downloading patched apps."
+					action={
+						<Button size="sm" onPress={() => router.push("/repos")}>
+							<ButtonText>Manage repositories</ButtonText>
+						</Button>
+					}
+				/>
+			) : (
+				<SectionList<RepoData, RepoSection>
+					sections={sections}
+					keyExtractor={(item) =>
+						`${item.userName}/${item.repoName}/${item.isReadOnly}`
+					}
+					contentContainerStyle={{ paddingBottom: 24 }}
+					renderSectionHeader={({ section: { title } }) => (
+						<View className="bg-background px-5 pb-2 pt-3">
+							<Text className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+								{title}
+							</Text>
+						</View>
+					)}
+					renderSectionFooter={({ section }) =>
+						section.title === "Default" ? (
+							<View className="px-5 pb-2">
+								<Text className="text-muted-foreground text-xs">
+									The default repo ships with the app and is read-only.
+								</Text>
+							</View>
+						) : null
+					}
+					renderItem={({ item }) => (
+						<RepoListRow
+							repo={item}
+							onPress={() =>
+								router.push(
+									`/repo/${encodeURIComponent(item.userName)}/${encodeURIComponent(item.repoName)}`,
+								)
+							}
+						/>
+					)}
+					ItemSeparatorComponent={() => (
+						<View className="ml-16 h-px bg-border/60" />
+					)}
+					SectionSeparatorComponent={() => <View className="h-1" />}
+					stickySectionHeadersEnabled={false}
+				/>
+			)}
 		</SafeAreaView>
+	);
+}
+
+function RepoListRow({
+	repo,
+	onPress,
+}: {
+	repo: RepoData;
+	onPress: () => void;
+}) {
+	return (
+		<View className="active:bg-accent flex-row items-center gap-3 px-5 py-3">
+			<View className="bg-primary-soft h-10 w-10 items-center justify-center rounded-xl">
+				<Github size={18} className="text-primary" />
+			</View>
+			<View className="flex-1">
+				<Text
+					className="text-foreground text-base font-semibold"
+					numberOfLines={1}
+				>
+					{repo.repoName}
+				</Text>
+				<Text className="text-muted-foreground text-xs" numberOfLines={1}>
+					{repo.userName}
+					{repo.isReadOnly ? " · default" : ""}
+				</Text>
+			</View>
+			<Button variant="ghost" size="sm" onPress={onPress}>
+				<ButtonText className="text-primary">Open</ButtonText>
+			</Button>
+		</View>
 	);
 }

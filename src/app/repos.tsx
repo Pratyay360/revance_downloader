@@ -1,7 +1,11 @@
-import { Code, Lock, Pencil, Plus, Trash2 } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Github, Lock, Pencil, Plus, Trash2 } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { EmptyState } from "@/components/empty-state";
+import { ListRow } from "@/components/list-row";
+import { ScreenHeader } from "@/components/screen-header";
 import {
 	Actionsheet,
 	ActionsheetBackdrop,
@@ -26,8 +30,9 @@ import { Text } from "@/components/ui/text";
 import { loadRepoDataList, RepoData, saveRepoDataList } from "@/lib/repo-data";
 
 /**
- * Port of RepoDataList from repo_data.dart — list user repositories with
- * add / edit / delete (undo via alert), read-only default repo protected.
+ * Add / edit / delete GitHub repositories that the home and detail screens
+ * fetch from. Default (read-only) repos are pinned at the top with a lock
+ * icon and have their edit / delete actions hidden.
  */
 export default function ReposScreen() {
 	const [repos, setRepos] = useState<RepoData[]>([]);
@@ -51,6 +56,13 @@ export default function ReposScreen() {
 	useEffect(() => {
 		reload();
 	}, [reload]);
+
+	const { defaultRepos, customRepos } = useMemo(() => {
+		return {
+			defaultRepos: repos.filter((r) => r.isReadOnly),
+			customRepos: repos.filter((r) => !r.isReadOnly),
+		};
+	}, [repos]);
 
 	const openAddDialog = () => {
 		setEditing(null);
@@ -125,73 +137,115 @@ export default function ReposScreen() {
 	};
 
 	return (
-		<SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-			<View className="flex-row items-center justify-between px-4 py-3">
-				<Text className="text-xl font-bold">Repository List</Text>
-				<Button size="sm" className="rounded-full" onPress={openAddDialog}>
-					<Plus size={18} className="text-primary-foreground" />
-				</Button>
-			</View>
+		<SafeAreaView className="bg-background flex-1" edges={["top"]}>
+			<ScreenHeader
+				title="Repository List"
+				subtitle="Default and custom GitHub repos"
+				right={
+					<Button
+						size="sm"
+						onPress={openAddDialog}
+						accessibilityLabel="Add repository"
+					>
+						<Plus size={18} className="text-primary-foreground" />
+					</Button>
+				}
+			/>
 
-			<ScrollView className="flex-1">
+			<ScrollView
+				className="flex-1"
+				contentContainerStyle={{ paddingBottom: 24 }}
+			>
 				{loading ? (
-					<View className="items-center py-16">
-						<Text className="text-muted-foreground">Loading…</Text>
-					</View>
+					<Text className="text-muted-foreground px-5 py-6">Loading…</Text>
 				) : repos.length === 0 ? (
-					<View className="items-center gap-2 py-16">
-						<Text className="font-semibold">No repositories found</Text>
-						<Text className="text-muted-foreground text-sm">
-							Add your first repository to get started
-						</Text>
-					</View>
+					<EmptyState
+						icon={Github}
+						title="No repositories found"
+						description="Add your first repository to get started"
+						action={
+							<Button size="sm" onPress={openAddDialog}>
+								<ButtonText>Add repository</ButtonText>
+							</Button>
+						}
+					/>
 				) : (
-					repos.map((repo) => (
-						<View
-							key={`${repo.userName}/${repo.repoName}/${repo.isReadOnly}`}
-							className="bg-card mx-4 my-1.5 rounded-xl border border-border/60 px-4 py-3"
-						>
-							<View className="flex-row items-center gap-3">
-								<View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
-									<Code size={18} className="text-foreground" />
-								</View>
-								<View className="flex-1">
-									<Text className="font-semibold" numberOfLines={1}>
-										{repo.repoName}
-									</Text>
-									<Text
-										className="text-muted-foreground text-xs"
-										numberOfLines={1}
-									>
-										{repo.userName}
-									</Text>
-								</View>
-								{repo.isReadOnly ? (
-									<Lock size={18} className="text-muted-foreground" />
-								) : (
-									<View className="flex-row gap-2">
-										<Pressable
-											onPress={() => openEditDialog(repo)}
-											className="p-1.5"
-											accessibilityLabel="Edit repository"
-										>
-											<Pencil size={18} className="text-primary" />
-										</Pressable>
-										<Pressable
-											onPress={() => {
-												setPendingDelete(repo);
-												setDeleteSheetOpen(true);
-											}}
-											className="p-1.5"
-											accessibilityLabel="Delete repository"
-										>
-											<Trash2 size={18} className="text-destructive" />
-										</Pressable>
+					<>
+						{defaultRepos.length > 0 && (
+							<>
+								<SectionLabel label="Default" />
+								{defaultRepos.map((repo) => (
+									<View key={`${repo.userName}/${repo.repoName}/default`}>
+										<ListRow
+											title={repo.repoName}
+											subtitle={repo.userName}
+											leading={
+												<View className="bg-secondary h-9 w-9 items-center justify-center rounded-xl">
+													<Github size={18} className="text-foreground" />
+												</View>
+											}
+											trailing={
+												<View className="p-1.5">
+													<Lock size={18} className="text-muted-foreground" />
+												</View>
+											}
+											disabled
+										/>
+										<Hairline />
 									</View>
-								)}
+								))}
+							</>
+						)}
+						{customRepos.length > 0 && (
+							<>
+								<SectionLabel label="Custom" />
+								{customRepos.map((repo) => (
+									<View key={`${repo.userName}/${repo.repoName}/custom`}>
+										<ListRow
+											title={repo.repoName}
+											subtitle={repo.userName}
+											leading={
+												<View className="bg-primary-soft h-9 w-9 items-center justify-center rounded-xl">
+													<Github size={18} className="text-primary" />
+												</View>
+											}
+											trailing={
+												<View className="flex-row items-center gap-1">
+													<Button
+														variant="ghost"
+														size="icon"
+														onPress={() => openEditDialog(repo)}
+														accessibilityLabel={`Edit ${repo.repoName}`}
+													>
+														<Pencil size={18} className="text-primary" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														onPress={() => {
+															setPendingDelete(repo);
+															setDeleteSheetOpen(true);
+														}}
+														accessibilityLabel={`Delete ${repo.repoName}`}
+													>
+														<Trash2 size={18} className="text-destructive" />
+													</Button>
+												</View>
+											}
+										/>
+										<Hairline />
+									</View>
+								))}
+							</>
+						)}
+						{customRepos.length === 0 && defaultRepos.length > 0 && (
+							<View className="px-5 pt-2">
+								<Text className="text-muted-foreground text-xs">
+									Tap the + button to add a custom repository.
+								</Text>
 							</View>
-						</View>
-					))
+						)}
+					</>
 				)}
 			</ScrollView>
 
@@ -205,29 +259,41 @@ export default function ReposScreen() {
 				<ModalBackdrop />
 				<ModalContent>
 					<ModalHeader>
-						<Text className="text-lg font-bold">
-							{editing ? "Edit Repository" : "Add Repository"}
-						</Text>
+						<View className="flex-1">
+							<Text className="text-foreground text-lg font-bold">
+								{editing ? "Edit Repository" : "Add Repository"}
+							</Text>
+						</View>
 						<ModalCloseButton />
 					</ModalHeader>
 					<ModalBody>
 						<View className="gap-4">
-							<Input className="rounded-xl">
-								<InputField
-									placeholder="User Name (e.g. bitwarden)"
-									value={userName}
-									onChangeText={setUserName}
-									autoCapitalize="none"
-								/>
-							</Input>
-							<Input className="rounded-xl">
-								<InputField
-									placeholder="Repo Name (e.g. android)"
-									value={repoName}
-									onChangeText={setRepoName}
-									autoCapitalize="none"
-								/>
-							</Input>
+							<View>
+								<Text className="text-muted-foreground mb-1.5 text-xs font-semibold uppercase">
+									Owner
+								</Text>
+								<Input className="rounded-xl">
+									<InputField
+										placeholder="e.g. j-hc"
+										value={userName}
+										onChangeText={setUserName}
+										autoCapitalize="none"
+									/>
+								</Input>
+							</View>
+							<View>
+								<Text className="text-muted-foreground mb-1.5 text-xs font-semibold uppercase">
+									Repo
+								</Text>
+								<Input className="rounded-xl">
+									<InputField
+										placeholder="e.g. revanced-magisk-module"
+										value={repoName}
+										onChangeText={setRepoName}
+										autoCapitalize="none"
+									/>
+								</Input>
+							</View>
 						</View>
 					</ModalBody>
 					<ModalFooter>
@@ -251,9 +317,19 @@ export default function ReposScreen() {
 					<ActionsheetDragIndicatorWrapper>
 						<ActionsheetDragIndicator />
 					</ActionsheetDragIndicatorWrapper>
-					<ActionsheetItem onPress={confirmDelete}>
-						<ActionsheetItemText>
+					<View className="px-4 pb-2 pt-1">
+						<Text className="text-foreground text-lg font-bold">
 							Delete {pendingDelete?.repoName}?
+						</Text>
+						<Text className="text-muted-foreground text-sm">
+							This removes the repo from your list. You can undo from the
+							confirmation.
+						</Text>
+					</View>
+					<ActionsheetItem onPress={confirmDelete}>
+						<Trash2 size={18} className="text-destructive" />
+						<ActionsheetItemText className="text-destructive">
+							Delete
 						</ActionsheetItemText>
 					</ActionsheetItem>
 					<ActionsheetItem onPress={() => setDeleteSheetOpen(false)}>
@@ -263,4 +339,18 @@ export default function ReposScreen() {
 			</Actionsheet>
 		</SafeAreaView>
 	);
+}
+
+function SectionLabel({ label }: { label: string }) {
+	return (
+		<View className="px-5 pb-2 pt-4">
+			<Text className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+				{label}
+			</Text>
+		</View>
+	);
+}
+
+function Hairline() {
+	return <View className="ml-16 h-px bg-border/60" />;
 }
