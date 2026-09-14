@@ -41,3 +41,22 @@ example
 # generated native folders
 /ios
 /android
+
+# Secrets
+src/lib/secrets.local.ts
+
+# Agent tooling + scratch output
+.agents/
+.claude/
+.codebuddy/
+.commandcode/
+.crush/
+.fx/
+.junie/
+.kiro/
+.pi/
+*-out.txt
+check-out.txt
+diag-out.txt
+files-out.txt
+tsc-out.txt
