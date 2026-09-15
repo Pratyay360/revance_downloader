@@ -19,6 +19,7 @@
     "expo-font": "~57.0.4",
     "expo-glass-effect": "~57.0.3",
     "expo-image": "~57.0.5",
+    "expo-intent-launcher": "~57.0.1",
     "expo-linking": "~57.0.10",
     "expo-network": "~57.0.2",
     "expo-notifications": "~57.0.18",
@@ -50,7 +51,6 @@
     "tailwind-variants": "^0.1.20"
   },
   "devDependencies": {
-    "@isudaji/react-native-install-apk": "^1.0.5",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "~19.2.18",
     "babel-plugin-module-resolver": "^5.0.3",

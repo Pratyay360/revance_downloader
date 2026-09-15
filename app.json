@@ -18,7 +18,8 @@
 				"monochromeImage": "./assets/images/android-icon-monochrome.png"
 			},
 			"predictiveBackGestureEnabled": false,
-			"package": "com.pratyaymustafi.rd_manager"
+			"package": "com.pratyaymustafi.rd_manager",
+			"permissions": ["android.permission.REQUEST_INSTALL_PACKAGES"]
 		},
 		"web": {
 			"output": "static",

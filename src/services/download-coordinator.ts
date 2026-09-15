@@ -1,5 +1,5 @@
-import { InstallApk } from "@isudaji/react-native-install-apk";
 import { DownloadTask, File, Paths } from "expo-file-system";
+import * as IntentLauncher from "expo-intent-launcher";
 import { sha256 } from "js-sha256";
 import { Platform } from "react-native";
 
@@ -109,7 +109,7 @@ class DownloadCoordinator {
 			});
 
 			this.status.set("Launching installer...");
-			this.launchInstaller(file.uri);
+			await this.launchInstaller(file);
 			await showNotification({
 				id: 2,
 				title: "Installation",
@@ -136,34 +136,45 @@ class DownloadCoordinator {
 		this.finish();
 	}
 
-	private launchInstaller(path: string) {
+	private async launchInstaller(file: File) {
 		if (Platform.OS !== "android") {
 			console.warn("APK installation is only supported on Android.");
 			return;
 		}
-		// Expo Go doesn't link the @isudaji/react-native-install-apk native module,
-		// so calling InstallApk.install() throws. Detect this and degrade gracefully
-		// — the file is still saved, the user just has to install it manually.
-		const native = InstallApk as unknown as {
-			install?: (p: string) => void;
-		};
-		if (typeof native.install !== "function") {
-			console.warn(
-				"InstallApk native module is not available (likely Expo Go). " +
-					"Skipping auto-install; the APK is saved at " +
-					path,
-			);
-			return;
-		}
-		// The native module expects a plain filesystem path.
-		const filePath = path.startsWith("file://")
-			? path.slice("file://".length)
-			: path;
 		try {
-			native.install(filePath);
+			const contentUri = await this.getShareableUri(file);
+			// FLAG_ACTIVITY_NEW_TASK (0x10000000) | FLAG_GRANT_READ_URI_PERMISSION (0x1).
+			// The content:// URI is served by expo-file-system's FileSystemFileProvider,
+			// which avoids the FileUriExposedException thrown for file:// URIs on API 24+.
+			// Requires android.permission.REQUEST_INSTALL_PACKAGES (see app.json).
+			await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+				data: contentUri,
+				type: "application/vnd.android.package-archive",
+				flags: 268435457,
+			});
 		} catch (e) {
-			console.warn("InstallApk.install failed:", e);
+			console.warn(
+				`APK installer could not be launched (file saved at ${file.uri}). ` +
+					"On Android 8+, allow “Install unknown apps” for this app, then tap the APK to install it.",
+				e,
+			);
 		}
+	}
+
+	/**
+	 * Resolve a content:// URI other apps can read. Prefers the SDK 57
+	 * File.contentUri property, falls back to the legacy getContentUriAsync API.
+	 */
+	private async getShareableUri(file: File): Promise<string> {
+		const candidate = file as unknown as { contentUri?: unknown };
+		if (
+			typeof candidate.contentUri === "string" &&
+			candidate.contentUri.startsWith("content://")
+		) {
+			return candidate.contentUri;
+		}
+		const { getContentUriAsync } = await import("expo-file-system/legacy");
+		return getContentUriAsync(file.uri);
 	}
 
 	private resetWatchdog(onTimeout: () => void) {
