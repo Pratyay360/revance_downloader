@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Github, Settings } from "lucide-react-native";
+import { FolderGit, Settings } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { SectionList, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -77,7 +77,7 @@ export default function ReposTabScreen() {
 
 			{sections.length === 0 ? (
 				<EmptyState
-					icon={Github}
+					icon={FolderGit}
 					title="No repositories"
 					description="Add a GitHub repo to start downloading patched apps."
 					action={
@@ -140,7 +140,7 @@ function RepoListRow({
 	return (
 		<View className="active:bg-accent flex-row items-center gap-3 px-5 py-3">
 			<View className="bg-primary-soft h-10 w-10 items-center justify-center rounded-xl">
-				<Github size={18} className="text-primary" />
+				<FolderGit size={18} className="text-primary" />
 			</View>
 			<View className="flex-1">
 				<Text

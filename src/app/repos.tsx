@@ -1,4 +1,4 @@
-import { Github, Lock, Pencil, Plus, Trash2 } from "lucide-react-native";
+import { FolderGit, Lock, Pencil, Plus, Trash2 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -160,7 +160,7 @@ export default function ReposScreen() {
 					<Text className="text-muted-foreground px-5 py-6">Loading…</Text>
 				) : repos.length === 0 ? (
 					<EmptyState
-						icon={Github}
+						icon={FolderGit}
 						title="No repositories found"
 						description="Add your first repository to get started"
 						action={
@@ -181,7 +181,7 @@ export default function ReposScreen() {
 											subtitle={repo.userName}
 											leading={
 												<View className="bg-secondary h-9 w-9 items-center justify-center rounded-xl">
-													<Github size={18} className="text-foreground" />
+													<FolderGit size={18} className="text-foreground" />
 												</View>
 											}
 											trailing={
@@ -206,7 +206,7 @@ export default function ReposScreen() {
 											subtitle={repo.userName}
 											leading={
 												<View className="bg-primary-soft h-9 w-9 items-center justify-center rounded-xl">
-													<Github size={18} className="text-primary" />
+													<FolderGit size={18} className="text-primary" />
 												</View>
 											}
 											trailing={
