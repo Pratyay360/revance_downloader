@@ -154,7 +154,9 @@ function injectPatch(file, patch) {
 		"\n" +
 		original.slice(end);
 	writeFileSync(file, next, "utf8");
-	console.log(`patch-android-signing: injected release-signing block into ${file}.`);
+	console.log(
+		`patch-android-signing: injected release-signing block into ${file}.`,
+	);
 	return true;
 }
 
@@ -169,8 +171,7 @@ function undo(file) {
 	const lineEnd = original.indexOf("\n", end + CLOSER.length);
 	const cutStart = lineStart === -1 ? 0 : lineStart + 1;
 	const cutEnd = lineEnd === -1 ? original.length : lineEnd + 1;
-	let next =
-		original.slice(0, cutStart) + original.slice(cutEnd);
+	let next = original.slice(0, cutStart) + original.slice(cutEnd);
 	next = next.replace(/\n{3,}/g, "\n\n");
 	writeFileSync(file, next, "utf8");
 	console.log(`patch-android-signing: removed patch from ${file}.`);

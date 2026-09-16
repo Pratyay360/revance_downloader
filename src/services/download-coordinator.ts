@@ -26,7 +26,9 @@ export class Notifier<T> {
 	constructor(public value: T) {}
 	set(value: T) {
 		this.value = value;
-		this.listeners.forEach((l) => l(value));
+		this.listeners.forEach((l) => {
+			l(value);
+		});
 	}
 	subscribe(listener: Listener<T>) {
 		this.listeners.add(listener);

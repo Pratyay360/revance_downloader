@@ -62,7 +62,8 @@ if (original.includes(MARKER)) {
 	if (end !== -1) {
 		const lineEnd = original.indexOf("\n", end + CLOSER.length);
 		original =
-			original.slice(0, start) + original.slice(lineEnd === -1 ? original.length : lineEnd + 1);
+			original.slice(0, start) +
+			original.slice(lineEnd === -1 ? original.length : lineEnd + 1);
 	}
 }
 
@@ -70,7 +71,11 @@ if (original.includes(MARKER)) {
 const lines = original.split("\n").filter((line) => {
 	const trimmed = line.trim();
 	for (const key of Object.keys(MANAGED)) {
-		if (trimmed === key || trimmed.startsWith(`${key}=`) || trimmed.startsWith(`${key} `)) {
+		if (
+			trimmed === key ||
+			trimmed.startsWith(`${key}=`) ||
+			trimmed.startsWith(`${key} `)
+		) {
 			return false;
 		}
 	}

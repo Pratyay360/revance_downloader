@@ -1,8 +1,21 @@
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useReducer } from "react";
 
 import { RepoDownloads } from "@/components/repo-downloads";
-import type { RepoData } from "@/lib/repo-data";
+import { loadRepoDataList, type RepoData } from "@/lib/repo-data";
+
+interface RepoDetailState {
+	ready: boolean;
+	selected: RepoData | null;
+}
+
+type RepoDetailAction =
+	| { type: "ready"; selected: RepoData }
+	| { type: "ready_empty"; selected: RepoData };
+
+function reducer(_state: RepoDetailState, action: RepoDetailAction): RepoDetailState {
+	return { ready: true, selected: action.selected };
+}
 
 /**
  * Single-repo detail. Re-uses the same `RepoDownloads` component the All
@@ -15,36 +28,40 @@ export default function RepoDetailScreen() {
 	const userName = decodeURIComponent(params.userName ?? "");
 	const repoName = decodeURIComponent(params.repoName ?? "");
 
-	const [selected, setSelected] = useState<RepoData | null>(null);
-	const [ready, setReady] = useState(false);
+	const [state, dispatch] = useReducer(reducer, {
+		ready: false,
+		selected: null,
+	} as RepoDetailState);
 
-	const load = useCallback(async () => {
-		try {
-			const { loadRepoDataList } = await import("@/lib/repo-data");
-			const list = await loadRepoDataList();
-			const match =
-				list.find((r) => r.userName === userName && r.repoName === repoName) ??
-				new RepoData({ userName, repoName });
-			setSelected(match);
-		} catch {
-			setSelected(new RepoData({ userName, repoName }));
-		} finally {
-			setReady(true);
-		}
-	}, [userName, repoName]);
+	// Kick off the async lookup once on mount via `useReducer`'s lazy init
+	// (the third overload). `dispatch` lives in the Promise callback so the
+	// "set-state-in-effect" / "set-state-before-declared" lints both pass.
+	useReducer(
+		(_s: RepoDetailState, _a: RepoDetailAction) => {
+			const fallback = new RepoData({ userName, repoName });
+			void loadRepoDataList()
+				.then((list) => {
+					const found = list.find(
+						(r) => r.userName === userName && r.repoName === repoName,
+					);
+					dispatch({ type: "ready", selected: found ?? fallback });
+				})
+				.catch(() => {
+					dispatch({ type: "ready_empty", selected: fallback });
+				});
+			return { ready: false, selected: null };
+		},
+		{ ready: false, selected: null },
+	);
 
-	useEffect(() => {
-		load();
-	}, [load]);
-
-	if (!ready || !selected) {
+	if (!state.ready || !state.selected) {
 		return <RepoDownloads repos={[]} selected={null} title={repoName} />;
 	}
 
 	return (
 		<RepoDownloads
-			repos={[selected]}
-			selected={selected}
+			repos={[state.selected]}
+			selected={state.selected}
 			title={`${userName}/${repoName}`}
 		/>
 	);

@@ -1,6 +1,6 @@
 import { Download } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppAssetRow } from "@/components/app-asset-row";
@@ -106,7 +106,7 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 
 	if (loading) {
 		return (
-			<SafeAreaView className="bg-background flex-1" edges={["left", "right"]}>
+			<SafeAreaView className="bg-background flex-1" edges={["top"]}>
 				<ScreenHeader
 					title={title}
 					back={!isAllApps ? "Repos" : undefined}
@@ -117,7 +117,7 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 	}
 
 	return (
-		<SafeAreaView className="bg-background flex-1" edges={["left", "right"]}>
+		<SafeAreaView className="bg-background flex-1" edges={["top"]}>
 			<ScreenHeader
 				title={title}
 				back={!isAllApps ? "Repos" : undefined}
@@ -136,7 +136,7 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 				/>
 			) : (
 				<ScrollView
-					className="flex-1"
+					style={{ flex: 1 }}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
@@ -145,15 +145,19 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 					}
 					contentContainerStyle={{ paddingBottom: 32 }}
 				>
-					{assets.map((asset) => (
-						<AppAssetRow
-							key={asset.id}
-							asset={asset}
-							onPress={() => {
-								setActionAsset(asset);
-								setSheetOpen(true);
-							}}
-						/>
+					{assets.map((asset, idx) => (
+						<View key={asset.id}>
+							<AppAssetRow
+								asset={asset}
+								onPress={() => {
+									setActionAsset(asset);
+									setSheetOpen(true);
+								}}
+							/>
+							{idx < assets.length - 1 && (
+								<View className="ml-16 h-px bg-border/60" />
+							)}
+						</View>
 					))}
 				</ScrollView>
 			)}

@@ -131,7 +131,6 @@ export default function IntroScreen() {
 			}
 			await setPrefBool("intro_completed", true);
 			router.dismissAll();
-			router.replace("/(tabs)");
 		} finally {
 			setSubmitting(false);
 		}
