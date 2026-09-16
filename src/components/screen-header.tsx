@@ -33,7 +33,9 @@ export function ScreenHeader({
 			<View className="flex-row items-center justify-between">
 				{back ? (
 					<Pressable
-						onPress={() => router.back()}
+						onPress={() => {
+							if (router.canGoBack()) router.back();
+						}}
 						hitSlop={12}
 						className="-ml-2 mr-2 flex-row items-center gap-1 active:opacity-60"
 						accessibilityRole="button"

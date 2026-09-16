@@ -146,7 +146,7 @@ export function RepoDownloads({ repos, selected, title }: RepoDownloadsProps) {
 					contentContainerStyle={{ paddingBottom: 32 }}
 				>
 					{assets.map((asset, idx) => (
-						<View key={asset.id}>
+						<View key={asset.downloadUrl || asset.name}>
 							<AppAssetRow
 								asset={asset}
 								onPress={() => {

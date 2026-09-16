@@ -9,7 +9,8 @@
    1. :root              — light defaults (all platforms)
    2. @media dark :root  — dark defaults; nativewind maps this to
                            Appearance.getColorScheme() on native.
-   3. :root.dark / :root.light — higher specificity for web class toggle. */
+   3. .dark / .light     — class toggles for web (class-qualified :root
+                           is unsupported on native). */
 @layer theme {
 	:root {
 		/* Brand: electric indigo accent on cool neutral surfaces */
@@ -73,7 +74,7 @@
 		}
 	}
 
-	:root.dark {
+	.dark {
 		--primary: 129 140 248;
 		--primary-foreground: 17 24 39;
 		--primary-soft: 49 46 129;
@@ -101,7 +102,7 @@
 		--warning: 251 191 36;
 	}
 
-	:root.light {
+	.light {
 		--primary: 79 70 229;
 		--primary-foreground: 255 255 255;
 		--primary-soft: 224 231 255;

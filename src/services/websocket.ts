@@ -35,11 +35,11 @@ function connect() {
 						? jsonMessage.title
 						: "New Message";
 				if (messageContent) {
-					showNotification({
+					void showNotification({
 						id: Math.floor(Date.now() / 1000) % 2147483647,
 						title,
 						body: messageContent,
-					});
+					}).catch((e) => console.warn("Failed to show notification:", e));
 				}
 			} catch (e) {
 				console.warn("Failed to parse WebSocket message:", e);

@@ -1,7 +1,10 @@
-```
 # Dependencies
 node_modules/
 package-lock.json
+
+# Expo
+.expo/
+expo-env.d.ts
 
 # Logs and temp files
 *.log
@@ -53,4 +56,5 @@ build/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
-```
+.turbo/cache/
+skills/

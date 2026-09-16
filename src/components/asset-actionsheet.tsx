@@ -49,8 +49,16 @@ export function AssetActionsheet({
 
 	if (!asset) return null;
 
-	const fromRepo =
-		repo ?? ("repoUserName" in asset ? (asset as RepoAsset) : null);
+	// `RepoAsset` carries `repoUserName`/`repoName`, but this sheet renders
+	// `userName`/`repoName`. Normalize so `From x/y` never prints undefined.
+	const fromRepo: { userName: string; repoName: string } | null =
+		repo ??
+		("repoUserName" in asset
+			? {
+					userName: (asset as RepoAsset).repoUserName,
+					repoName: (asset as RepoAsset).repoName,
+				}
+			: null);
 
 	return (
 		<Actionsheet isOpen={isOpen} onClose={onClose}>

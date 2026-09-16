@@ -4,6 +4,7 @@ import {
 	Redirect,
 	Stack,
 	ThemeProvider,
+	usePathname,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
@@ -23,10 +24,13 @@ import {
 	initWebSocketService,
 } from "@/services/websocket";
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {
+	// Already prevented (Fast Refresh double-invoke) — safe to ignore.
+});
 
 export default function TabLayout() {
 	const colorScheme = useColorScheme();
+	const pathname = usePathname();
 	const [introChecked, setIntroChecked] = useState(false);
 	const [introCompleted, setIntroCompleted] = useState(false);
 
@@ -45,6 +49,22 @@ export default function TabLayout() {
 			disposed = true;
 		};
 	}, []);
+
+	// Re-read the flag whenever the route changes. `intro.tsx` sets the pref
+	// then navigates away, but this layout's state would otherwise stay
+	// `false` and `<Redirect href="/intro" />` would push the user straight
+	// back into onboarding (intro loop).
+	useEffect(() => {
+		if (!introChecked || introCompleted) return;
+		let disposed = false;
+		(async () => {
+			const completed = await getPrefBool("intro_completed");
+			if (!disposed && completed) setIntroCompleted(true);
+		})();
+		return () => {
+			disposed = true;
+		};
+	}, [pathname, introChecked, introCompleted]);
 
 	// Port of MyApp._initializeNotifications + WebSocketService.init() from main.dart:
 	// set up the notification channel, ask for permission, then connect the

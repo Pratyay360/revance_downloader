@@ -5,7 +5,6 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Code,
-	type Download,
 	FolderOpen,
 	Sparkles,
 } from "lucide-react-native";
@@ -31,7 +30,7 @@ import {
 } from "@/services/notifications";
 
 type Step = {
-	icon: typeof Download;
+	icon: typeof Sparkles;
 	eyebrow: string;
 	title: string;
 	body: string;
@@ -130,7 +129,7 @@ export default function IntroScreen() {
 				]);
 			}
 			await setPrefBool("intro_completed", true);
-			router.dismissAll();
+			router.replace("/(tabs)");
 		} finally {
 			setSubmitting(false);
 		}

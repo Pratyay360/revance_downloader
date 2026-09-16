@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { Download } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -85,12 +85,14 @@ export default function HomeScreen() {
 		void fetchReleases(true, repos);
 	}, [fetchReleases, repos]);
 
-	// Kicked off once on mount via the `useState` lazy initializer. Each
-	// `setState` lives inside a `.then`/`.catch` callback so no setState is
-	// called synchronously inside an effect body.
-	useState(() => {
+	// Kick off the initial load once on mount. Previously this lived in a
+	// `useState` lazy initializer (a render-phase side effect): double-invoked
+	// in StrictMode, causing duplicate fetches and setState-during-render.
+	useEffect(() => {
+		let cancelled = false;
 		void loadRepoDataList()
 			.then((list) => {
+				if (cancelled) return;
 				setRepos(list);
 				setReposLoaded(true);
 				if (list.length > 0) {
@@ -98,10 +100,12 @@ export default function HomeScreen() {
 				}
 			})
 			.catch(() => {
-				setReposLoaded(true);
+				if (!cancelled) setReposLoaded(true);
 			});
-		return null;
-	});
+		return () => {
+			cancelled = true;
+		};
+	}, [fetchReleases]);
 
 	if (loading) {
 		return (
@@ -124,7 +128,7 @@ export default function HomeScreen() {
 					title="No repositories yet"
 					description="Add a GitHub repo to start downloading patched apps."
 					action={
-						<Button size="sm" onPress={() => router.push("/(tabs)/explore")}>
+						<Button size="sm" onPress={() => router.push("/explore")}>
 							<ButtonText>Go to Repositories</ButtonText>
 						</Button>
 					}
@@ -152,7 +156,7 @@ export default function HomeScreen() {
 									</Text>
 								</View>
 								{list.map((asset, idx) => (
-									<View key={asset.id}>
+									<View key={asset.downloadUrl || asset.name}>
 										<AppAssetRow
 											asset={asset}
 											onPress={() => {
