@@ -1,0 +1,8 @@
+[tools]
+android-sdk = "latest"
+bun = "latest"
+node = "latest"
+"npm:eas-cli" = "latest"
+
+[deps]
+bun = { auto = true }
