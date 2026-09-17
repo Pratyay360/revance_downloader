@@ -1,6 +1,8 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
+import { getPrefBool, setPrefBool } from "@/lib/prefs";
+
 /**
  * Port of notifications.dart — local notification helper built on
  * expo-notifications (replaces flutter_local_notifications).
@@ -70,6 +72,42 @@ function ensureHandler(): void {
 	}
 }
 
+// Every notification this app posts is routed to this channel (see
+// showNotification). Without an explicit channelId expo-notifications falls
+// back to its own `expo_notifications_fallback_notification_channel`.
+const ANDROID_CHANNEL_ID = "basic_channel";
+
+// Bumped whenever a property Android treats as immutable (importance, sound,
+// vibration) changes, so existing installs get migrated exactly once.
+const CHANNEL_MIGRATION_KEY = "notifications_channel_v2";
+
+/**
+ * Android only lets an app update a channel's name and description after
+ * creation — importance, sound and vibration are frozen at their original
+ * values. So an install that already created the channel would keep the old
+ * (non-heads-up) importance forever. Recreate it once to pick up the current
+ * config.
+ *
+ * The pref flag is what makes this safe: we never delete a channel again, so a
+ * change the *user* makes later in system settings is never overwritten.
+ */
+async function migrateAndroidChannel(
+	Notifications: NotificationsModule,
+): Promise<void> {
+	try {
+		if (await getPrefBool(CHANNEL_MIGRATION_KEY)) return;
+		const existing =
+			await Notifications.getNotificationChannelAsync(ANDROID_CHANNEL_ID);
+		if (existing && existing.importance < Notifications.AndroidImportance.HIGH) {
+			await Notifications.deleteNotificationChannelAsync(ANDROID_CHANNEL_ID);
+		}
+		await setPrefBool(CHANNEL_MIGRATION_KEY, true);
+	} catch (e) {
+		// Never let this block channel setup — the channel is (re)created next.
+		console.warn("Error migrating notification channel:", e);
+	}
+}
+
 let initialized = false;
 
 export async function initNotifications(): Promise<void> {
@@ -79,10 +117,16 @@ export async function initNotifications(): Promise<void> {
 	ensureHandler();
 	try {
 		if (Platform.OS === "android") {
-			await Notifications.setNotificationChannelAsync("basic_channel", {
+			await migrateAndroidChannel(Notifications);
+			await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
 				name: "Basic Notifications",
-				importance: Notifications.AndroidImportance.DEFAULT,
-				sound: "default",
+				// HIGH, not DEFAULT: heads-up banners require HIGH or above, and
+				// DEFAULT would silently downgrade what the fallback channel did.
+				importance: Notifications.AndroidImportance.HIGH,
+				// Do NOT pass sound: "default" here. On the channel API the string is
+				// treated as a custom raw-resource name, so it logs "Custom sound
+				// 'default' not found in native app". Omitting the key already falls
+				// back to Settings.System.DEFAULT_NOTIFICATION_URI (the system sound).
 				vibrationPattern: [0, 250, 250, 250],
 				showBadge: true,
 			});
@@ -142,7 +186,10 @@ export async function showNotification(params: {
 				body: params.body,
 				sound: "default",
 			},
-			trigger: null, // fire immediately
+			// Channel-aware triggers carry no time, so this still fires immediately
+			// (parseTrigger maps it to { type: 'channel' } on Android, null on iOS).
+			trigger:
+				Platform.OS === "android" ? { channelId: ANDROID_CHANNEL_ID } : null,
 		});
 	} catch (e) {
 		console.warn("Error showing notification:", e);
