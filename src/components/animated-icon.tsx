@@ -5,14 +5,20 @@ import { Dimensions, StyleSheet, View } from "react-native";
 import Animated, { Easing, Keyframe } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
-const INITIAL_SCALE_FACTOR = Dimensions.get("screen").height / 90;
 const DURATION = 600;
+
+function getInitialScaleFactor(): number {
+	const screen = Dimensions.get("screen");
+	return (screen?.height ?? 900) / 90;
+}
 
 export function AnimatedSplashOverlay() {
 	const [animate, setAnimate] = useState(false);
 	const [visible, setVisible] = useState(true);
 
 	if (!visible) return null;
+
+	const initialScaleFactor = getInitialScaleFactor();
 
 	const splashKeyframe = new Keyframe({
 		0: {
@@ -70,15 +76,17 @@ export function AnimatedSplashOverlay() {
 	);
 }
 
-const keyframe = new Keyframe({
-	0: {
-		transform: [{ scale: INITIAL_SCALE_FACTOR }],
-	},
-	100: {
-		transform: [{ scale: 1 }],
-		easing: Easing.elastic(0.7),
-	},
-});
+function makeKeyframe(initialScale: number) {
+	return new Keyframe({
+		0: {
+			transform: [{ scale: initialScale }],
+		},
+		100: {
+			transform: [{ scale: 1 }],
+			easing: Easing.elastic(0.7),
+		},
+	});
+}
 
 const logoKeyframe = new Keyframe({
 	0: {
@@ -107,6 +115,7 @@ const glowKeyframe = new Keyframe({
 });
 
 export function AnimatedIcon() {
+	const keyframe = makeKeyframe(getInitialScaleFactor());
 	return (
 		<View style={styles.iconContainer}>
 			<Animated.View

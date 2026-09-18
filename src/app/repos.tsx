@@ -1,10 +1,10 @@
 import { FolderGit, Lock, Pencil, Plus, Trash2 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EmptyState } from "@/components/empty-state";
 import { ListRow } from "@/components/list-row";
+import { SafeAreaView } from "@/components/safe-area-view";
 import { ScreenHeader } from "@/components/screen-header";
 import {
 	Actionsheet,

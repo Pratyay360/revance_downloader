@@ -1,2 +1,3 @@
 # Taste
-See [taste/taste.md](taste/taste.md)
+
+(no durable preferences yet — only brief task confirmations received)

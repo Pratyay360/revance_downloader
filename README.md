@@ -19,6 +19,8 @@ Tailwind / NativeWind) and [`src/constants/theme.ts`](src/constants/theme.ts)
 (raw JS values for native tabs and Reanimated). Reusable screen
 primitives live in `src/components/`:
 
+- `SafeAreaView` — screen root with a `styled()`-wrapped safe-area view so
+  `className` (e.g. `flex-1 bg-background`) actually applies.
 - `ScreenHeader` — large-title header for every top-level route.
 - `ListRow` — grouped-list row with leading icon, subtitle, trailing accessory.
 - `EmptyState` — tinted icon well, headline, supporting copy, optional CTA.
@@ -63,7 +65,7 @@ runner plus signing secrets. Add it later if you need it.
    **Settings → Secrets and variables → Actions**:
 
    | Secret | Value |
-   |---|---|
+      |---|---|
    | `ANDROID_KEYSTORE_BASE64` | contents of `release.keystore.b64` |
    | `ANDROID_KEYSTORE_PASSWORD` | keystore password |
    | `ANDROID_KEY_ALIAS` | key alias (e.g. `upload`) |

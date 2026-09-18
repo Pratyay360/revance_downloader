@@ -1,12 +1,12 @@
 import { Download } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppAssetRow } from "@/components/app-asset-row";
 import { AssetActionsheet } from "@/components/asset-actionsheet";
 import { DownloadProgressModal } from "@/components/download-progress-modal";
 import { EmptyState } from "@/components/empty-state";
+import { SafeAreaView } from "@/components/safe-area-view";
 import { ScreenHeader } from "@/components/screen-header";
 import {
 	fetchAllReposAssets,

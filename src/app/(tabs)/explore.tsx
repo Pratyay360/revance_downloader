@@ -2,9 +2,9 @@ import { useRouter } from "expo-router";
 import { FolderGit, Settings } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { SectionList, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EmptyState } from "@/components/empty-state";
+import { SafeAreaView } from "@/components/safe-area-view";
 import { ScreenHeader } from "@/components/screen-header";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
